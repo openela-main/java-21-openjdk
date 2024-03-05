@@ -314,7 +314,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 1
+%global updatever 2
 %global patchver 0
 # buildjdkver is usually same as %%{featurever},
 # but in time of bootstrap of next jdk, it is featurever-1,
@@ -378,7 +378,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        12
+%global buildver        13
 %global rpmrelease      1
 #%%global tagsuffix     %%{nil}
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
@@ -662,8 +662,6 @@ Patch6: jdk8009550-rh910107-fail_to_load_pcsc_library.patch
 #
 #############################################
 
-# Currently empty
-
 #############################################
 #
 # Portable build specific patches
@@ -736,13 +734,13 @@ Provides: bundled(freetype) = 2.13.0
 # Version in src/java.desktop/share/native/libsplashscreen/giflib/gif_lib.h
 Provides: bundled(giflib) = 5.2.1
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
-Provides: bundled(harfbuzz) = 7.2.0
+Provides: bundled(harfbuzz) = 8.2.2
 # Version in src/java.desktop/share/native/liblcms/lcms2.h
 Provides: bundled(lcms2) = 2.15.0
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
 Provides: bundled(libjpeg) = 6b
 # Version in src/java.desktop/share/native/libsplashscreen/libpng/png.h
-Provides: bundled(libpng) = 1.6.39
+Provides: bundled(libpng) = 1.6.40
 # We link statically against libstdc++ to increase portability
 BuildRequires: libstdc++-static
 %endif
@@ -1688,6 +1686,29 @@ done
 %{_jvmdir}/%{miscportablearchive}.sha256sum
 
 %changelog
+* Tue Jan 09 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.2.0.13-1
+- Update to jdk-21.0.2+13 (GA)
+- Update release notes to 21.0.2+13
+- Drop no longer needed local patch to fix versioning
+- ** This tarball is embargoed until 2024-01-16 @ 1pm PT. **
+
+* Mon Jan 08 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.2.0.12-1
+- Update to jdk-21.0.2+12 (GA)
+- Update release notes to 21.0.2+12
+- ** This tarball is embargoed until 2024-01-16 @ 1pm PT. **
+
+* Sat Jan 06 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.2.0.11-1
+- Update to jdk-21.0.2+11 (GA)
+- Update release notes to 21.0.2+11
+- Bump libpng version to 1.6.40 following JDK-8316030
+- Bump HarfBuzz version to 8.2.2 following JDK-8313643
+- Drop local JDK-8311630 patch which is now upstream
+- Locally patch versioning to be 21.0.2 released on 2014-01-16
+- ** This tarball is embargoed until 2024-01-16 @ 1pm PT. **
+
+* Mon Nov 06 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.1.0.12-2
+- Include JDK-8311630 patch to implement Foreign Function & Memory preview API on s390x
+
 * Sun Oct 29 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.1.0.12-1
 - Update to jdk-21.0.1.0+12 (GA)
 - Update release notes to 21.0.1.0+12

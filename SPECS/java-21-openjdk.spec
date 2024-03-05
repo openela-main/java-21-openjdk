@@ -300,7 +300,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 1
+%global updatever 2
 %global patchver 0
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
 # We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
@@ -350,8 +350,8 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        12
-%global rpmrelease      2
+%global buildver        13
+%global rpmrelease      1
 # Settings used by the portable build
 %global portablerelease 1
 %global portablesuffix el7_9
@@ -1414,8 +1414,6 @@ Patch6: jdk8009550-rh910107-fail_to_load_pcsc_library.patch
 #
 #############################################
 
-# Currently empty
-
 #############################################
 #
 # Portable build specific patches
@@ -1492,13 +1490,13 @@ Provides: bundled(freetype) = 2.13.0
 # Version in src/java.desktop/share/native/libsplashscreen/giflib/gif_lib.h
 Provides: bundled(giflib) = 5.2.1
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
-Provides: bundled(harfbuzz) = 7.2.0
+Provides: bundled(harfbuzz) = 8.2.2
 # Version in src/java.desktop/share/native/liblcms/lcms2.h
 Provides: bundled(lcms2) = 2.15.0
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
 Provides: bundled(libjpeg) = 6b
 # Version in src/java.desktop/share/native/libsplashscreen/libpng/png.h
-Provides: bundled(libpng) = 1.6.39
+Provides: bundled(libpng) = 1.6.40
 %endif
 
 # this is always built, also during debug-only build
@@ -2482,6 +2480,20 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Tue Jan 09 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.2.0.13-1
+- Update to jdk-21.0.2+13 (GA)
+- Sync the copy of the portable specfile with the latest update
+- Bump libpng version to 1.6.40 following JDK-8316030
+- Bump HarfBuzz version to 8.2.2 following JDK-8313643
+- Drop local JDK-8311630 patch which is now upstream
+- ** This tarball is embargoed until 2024-01-16 @ 1pm PT. **
+- Resolves: RHEL-20998
+
+* Mon Nov 06 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.1.0.12-3
+- Include JDK-8311630 patch to implement Foreign Function & Memory preview API on s390x
+- Sync the copy of the portable specfile with the latest update
+- Resolves: RHEL-16386
+
 * Mon Oct 30 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.1.0.12-2
 - Switch to using portable binaries built on RHEL 7
 - Sync the copy of the portable specfile with the RHEL 7 version
