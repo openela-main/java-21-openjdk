@@ -143,6 +143,11 @@
 # Set of architectures where we verify backtraces with gdb
 %global gdb_arches %{jit_arches} %{zero_arches}
 
+# Define the OS the portable JDK is built on
+# This is undefined for openjdk-portable-rhel-8 builds and
+# equals 'rhel7' for openjdk-portable-rhel-7 builds
+%global pkgos rhel7
+
 # By default, we build a debug build during main build on JIT architectures
 %if %{with slowdebug}
 %ifarch %{debug_arches}
@@ -300,7 +305,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 2
+%global updatever 3
 %global patchver 0
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
 # We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
@@ -336,7 +341,7 @@
 # Define IcedTea version used for SystemTap tapsets and desktop file
 %global icedteaver      6.0.0pre00-c848b93a8598
 # Define current Git revision for the FIPS support patches
-%global fipsver 75ffdc48eda
+%global fipsver 0a42e29b391
 # Define JDK versions
 %global newjavaver %{featurever}.%{interimver}.%{updatever}.%{patchver}
 %global javaver         %{featurever}
@@ -350,11 +355,11 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        13
+%global buildver        9
 %global rpmrelease      1
 # Settings used by the portable build
 %global portablerelease 1
-%global portablesuffix el7_9
+%global portablesuffix %{?pkgos:el7_9}%{!?pkgos:el8}
 %global portablebuilddir /builddir/build/BUILD
 
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
@@ -1140,8 +1145,9 @@ Requires: ca-certificates
 # Require javapackages-filesystem for ownership of /usr/lib/jvm/ and macros
 Requires: javapackages-filesystem
 # Require zone-info data provided by tzdata-java sub-package
-# 2023c required as of JDK-8305113
-Requires: tzdata-java >= 2023c
+# 2024a required as of JDK-8325150
+# Use 2023d until 2024a is in the buildroot
+Requires: tzdata-java >= 2023d
 # for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
@@ -1262,8 +1268,6 @@ Provides: java-%{origin}-src%{?1} = %{epoch}:%{version}-%{release}
 
 # Prevent brp-java-repack-jars from being run
 %global __jar_repack 0
-# Define the OS the portable JDK is built on
-%global pkgos rhel7
 # Define the root name of the portable packages
 %global pkgnameroot java-%{featurever}-%{origin}-portable%{?pkgos:-%{pkgos}}
 
@@ -1402,10 +1406,6 @@ Patch1001: fips-%{featurever}u-%{fipsver}.patch
 #
 #############################################
 
-# JDK-8009550, RH910107: Depend on pcsc-lite-libs instead of pcsc-lite-devel as this is only in optional repo
-# PR: https://github.com/openjdk/jdk/pull/15409
-Patch6: jdk8009550-rh910107-fail_to_load_pcsc_library.patch
-
 # Currently empty
 
 #############################################
@@ -1467,8 +1467,9 @@ BuildRequires: %{pkgnameroot}-misc = %{epoch}:%{version}-%{prelease}.%{portables
 %ifarch %{zero_arches}
 BuildRequires: libffi-devel
 %endif
-# 2023c required as of JDK-8305113
-BuildRequires: tzdata-java >= 2023c
+# 2024a required as of JDK-8325150
+# Use 2023d until 2024a is in the buildroot
+BuildRequires: tzdata-java >= 2023d
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -1486,7 +1487,7 @@ BuildRequires: libjpeg-devel
 BuildRequires: libpng-devel
 %else
 # Version in src/java.desktop/share/legal/freetype.md
-Provides: bundled(freetype) = 2.13.0
+Provides: bundled(freetype) = 2.13.2
 # Version in src/java.desktop/share/native/libsplashscreen/giflib/gif_lib.h
 Provides: bundled(giflib) = 5.2.1
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
@@ -1840,6 +1841,7 @@ if [ %{include_debug_build} -eq 0 -a  %{include_normal_build} -eq 0 -a  %{includ
   exit 14
 fi
 
+export XZ_OPT="-T0"
 %setup -q -c -n %{uniquesuffix ""} -T -a 0
 # https://bugzilla.redhat.com/show_bug.cgi?id=1189084
 prioritylength=`expr length %{priority}`
@@ -1856,11 +1858,22 @@ sh %{SOURCE12} %{top_level_dir_name}
 %endif
 
 # Patch the JDK
+# This syntax is deprecated:
+#    %patchN [...]
+# and should be replaced with:
+#    %patch -PN [...]
+# For example:
+#    %patch1001 -p1
+# becomes:
+#    %patch -P1001 -p1
+# The replacement format suggested by recent (circa Fedora 38) RPM
+# deprecation messages:
+#    %patch N [...]
+# is not backward-compatible with prior (circa RHEL-8) versions of
+# rpmbuild.
 pushd %{top_level_dir_name}
 # Add crypto policy and FIPS support
-%patch1001 -p1
-# Patches in need of upstreaming
-%patch6 -p1
+%patch -P1001 -p1
 popd # openjdk
 
 
@@ -1916,6 +1929,8 @@ function customisejdk() {
         ln -s %{_datadir}/javazi-1.8/tzdb.dat ${imagepath}/lib/tzdb.dat
     fi
 }
+
+export XZ_OPT="-T0"
 
 mkdir -p $(dirname %{installoutputdir})
 
@@ -2171,6 +2186,8 @@ install -D -p -m 755 ${miscdir}/%{alt_java_name} $RPM_BUILD_ROOT%{jrebindir -- $
     ln -sf %{sdkdir -- $suffix} %{jrelnk -- $suffix}
   popd
 
+  # Copy alt-java man page into image so it gets installed with the others
+  cp -a ${miscdir}/%{alt_java_name}.1 ${jdk_image}/man/man1
   # Install man pages
   install -d -m 755 $RPM_BUILD_ROOT%{_mandir}/man1
   pushd ${jdk_image}
@@ -2480,6 +2497,90 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Sun Apr 14 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.3.0.9-1
+- Update to jdk-21.0.3+9 (GA)
+- Update release notes to 21.0.3+9
+- Switch to GA mode.
+- Sync the copy of the portable specfile with the latest update
+- ** This tarball is embargoed until 2024-04-16 @ 1pm PT. **
+- Resolves: RHEL-32423
+
+* Sun Apr 14 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.3.0.7-0.1.ea
+- Update to jdk-21.0.3+7 (EA)
+- Update release notes to 21.0.3+7
+- Require tzdata 2024a due to upstream inclusion of JDK-8322725
+- Only require tzdata 2023d for now as 2024a is unavailable in buildroot
+- Drop JDK-8009550 which is now available upstream
+- Re-generate FIPS patch against 21.0.3+7 following backport of JDK-8325254
+- Resolves: RHEL-30945
+
+* Sun Apr 14 2024 Thomas Fitzsimmons <fitzsim@redhat.com> - 1:21.0.3.0.1-0.2.ea
+- Invoke xz in multi-threaded mode
+- generate_source_tarball.sh: Add WITH_TEMP environment variable
+- generate_source_tarball.sh: Multithread xz on all available cores
+- generate_source_tarball.sh: Add OPENJDK_LATEST environment variable
+- generate_source_tarball.sh: Update comment about tarball naming
+- generate_source_tarball.sh: Reformat comment header
+- generate_source_tarball.sh: Reformat and update help output
+- generate_source_tarball.sh: Do a shallow clone, for speed
+- generate_source_tarball.sh: Append -ea designator when required
+- generate_source_tarball.sh: Eliminate some removal prompting
+- generate_source_tarball.sh: Make tarball reproducible
+- generate_source_tarball.sh: Prefix temporary directory with temp-
+- generate_source_tarball.sh: Remove temporary directory exit conditions
+- generate_source_tarball.sh: Fix -ea logic to add dash
+- generate_source_tarball.sh: Set compile-command in Emacs
+- generate_source_tarball.sh: Remove REPO_NAME from FILE_NAME_ROOT
+- generate_source_tarball.sh: Move PROJECT_NAME and REPO_NAME checks
+- generate_source_tarball.sh: shellcheck: Remove x-prefixes since we use Bash (SC2268)
+- generate_source_tarball.sh: shellcheck: Double-quote variable references (SC2086)
+- generate_source_tarball.sh: shellcheck: Do not use -a (SC2166)
+- generate_source_tarball.sh: shellcheck: Do not use $ on arithmetic variables (SC2004)
+- Use backward-compatible patch syntax
+- generate_source_tarball.sh: Ignore -ga tags with OPENJDK_LATEST
+- generate_source_tarball.sh: Fix whitespace
+- generate_source_tarball.sh: Remove trailing period in echo
+- generate_source_tarball.sh: Use long-style argument to grep
+- generate_source_tarball.sh: Add license
+- generate_source_tarball.sh: Add indentation instructions for Emacs
+- Related: RHEL-30945
+
+* Sun Apr 14 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.3.0.1-0.2.ea
+- Install alt-java man page from the misc tarball as it is no longer in the JDK image
+- generate_source_tarball.sh: Update examples in header for clarity
+- generate_source_tarball.sh: Cleanup message issued when checkout already exists
+- generate_source_tarball.sh: Create directory in TMPDIR when using WITH_TEMP
+- generate_source_tarball.sh: Only add --depth=1 on non-local repositories
+- Move maintenance scripts to a scripts subdirectory
+- discover_trees.sh: Set compile-command and indentation instructions for Emacs
+- discover_trees.sh: shellcheck: Do not use -o (SC2166)
+- discover_trees.sh: shellcheck: Remove x-prefixes since we use Bash (SC2268)
+- discover_trees.sh: shellcheck: Double-quote variable references (SC2086)
+- generate_source_tarball.sh: Add authorship
+- icedtea_sync.sh: Set compile-command and indentation instructions for Emacs
+- icedtea_sync.sh: shellcheck: Double-quote variable references (SC2086)
+- icedtea_sync.sh: shellcheck: Remove x-prefixes since we use Bash (SC2268)
+- openjdk_news.sh: Set compile-command and indentation instructions for Emacs
+- openjdk_news.sh: shellcheck: Double-quote variable references (SC2086)
+- openjdk_news.sh: shellcheck: Remove x-prefixes since we use Bash (SC2268)
+- openjdk_news.sh: shellcheck: Remove deprecated egrep usage (SC2196)
+- generate_source_tarball.sh: Output values of new options WITH_TEMP and OPENJDK_LATEST
+- generate_source_tarball.sh: Double-quote DEPTH reference (SC2086)
+- generate_source_tarball.sh: Avoid empty DEPTH reference while still appeasing shellcheck
+- Related: RHEL-30945
+
+* Sun Apr 14 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.3.0.1-0.1.ea
+- Update to jdk-21.0.3+1 (EA)
+- Update release notes to 21.0.3+1
+- Switch to EA mode
+- Require tzdata 2023d due to upstream inclusion of JDK-8322725
+- Bump FreeType version to 2.13.2 following JDK-8316028
+- Related: RHEL-30945
+
+* Fri Apr 12 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.2.0.13-2
+- Define portablesuffix according to whether pkgos is defined or not
+- Related: RHEL-30945
+
 * Tue Jan 09 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.2.0.13-1
 - Update to jdk-21.0.2+13 (GA)
 - Sync the copy of the portable specfile with the latest update
