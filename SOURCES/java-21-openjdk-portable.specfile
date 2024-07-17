@@ -150,6 +150,8 @@
 %else
 %global gdb_arches %{jit_arches} %{zero_arches}
 %endif
+# Architecture on which we run Java only tests
+%global jdk_test_arch x86_64
 
 # By default, we build a slowdebug build during main build on JIT architectures
 %if %{with slowdebug}
@@ -314,7 +316,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 3
+%global updatever 4
 %global patchver 0
 # buildjdkver is usually same as %%{featurever},
 # but in time of bootstrap of next jdk, it is featurever-1,
@@ -378,7 +380,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        9
+%global buildver        7
 %global rpmrelease      1
 #%%global tagsuffix     %%{nil}
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
@@ -711,9 +713,6 @@ BuildRequires: libffi-devel
 BuildRequires: graphviz
 BuildRequires: pandoc
 %endif
-# 2024a required as of JDK-8325150
-# Use 2023d until 2024a is in the buildroot
-BuildRequires: tzdata-java >= 2023d
 # cacerts build requirement in portable mode
 BuildRequires: ca-certificates
 # Earlier versions have a bug in tree vectorization on PPC
@@ -731,6 +730,7 @@ BuildRequires: harfbuzz-devel
 BuildRequires: lcms2-devel
 BuildRequires: libjpeg-devel
 BuildRequires: libpng-devel
+BuildRequires: zlib-devel
 %else
 # Version in src/java.desktop/share/legal/freetype.md
 Provides: bundled(freetype) = 2.13.2
@@ -739,11 +739,13 @@ Provides: bundled(giflib) = 5.2.1
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
 Provides: bundled(harfbuzz) = 8.2.2
 # Version in src/java.desktop/share/native/liblcms/lcms2.h
-Provides: bundled(lcms2) = 2.15.0
+Provides: bundled(lcms2) = 2.16.0
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
 Provides: bundled(libjpeg) = 6b
 # Version in src/java.desktop/share/native/libsplashscreen/libpng/png.h
 Provides: bundled(libpng) = 1.6.40
+# Version in src/java.base/share/native/libzip/zlib/zlib.h
+Provides: bundled(zlib) = 1.3.1
 # We link statically against libstdc++ to increase portability
 BuildRequires: libstdc++-static
 %endif
@@ -1173,18 +1175,21 @@ function buildjdk() {
 
 function stripjdk() {
     local outputdir=${1}
-    local jdkimagepath=${outputdir}/images/%{jdkimage}
-    local jreimagepath=${outputdir}/images/%{jreimage}
-    local jmodimagepath=${outputdir}/images/jmods
+    local jdkimagepath=images/%{jdkimage}
+    local jreimagepath=images/%{jreimage}
+    local jmodimagepath=images/jmods
+    local modulefile=lib/modules
     local supportdir=${outputdir}/support
     local modulebuildpath=${outputdir}/jdk/modules
+    local jdkoutdir=${outputdir}/${jdkimagepath}
+    local jreoutdir=${outputdir}/${jreimagepath}
 
     if [ "x$suffix" = "x" ] ; then
         # Keep the unstripped version for consumption by RHEL RPMs
-        cp -a ${jdkimagepath}{,.unstripped}
+        cp -a ${jdkoutdir}{,.unstripped}
 
         # Strip the files
-        for file in $(find ${jdkimagepath} ${jreimagepath} ${supportdir} ${modulebuildpath} -type f) ; do
+        for file in $(find ${jdkoutdir} ${jreoutdir} ${supportdir} ${modulebuildpath} -type f) ; do
             if file ${file} | cut -d ':' -f 2 | grep -q 'ELF'; then
                 noextfile=${file/.so/};
                 scl enable devtoolset-%{dtsversion} "objcopy --only-keep-debug ${file} ${noextfile}.debuginfo";
@@ -1198,24 +1203,53 @@ function stripjdk() {
             echo "Support directory missing.";
             exit 15
         fi
-        for cmd in $(find ${supportdir} -name '*.jmod_exec.cmdline') ; do
+        # Build the java.base jmod a third time to fix the hashes of dependent jmods
+        for cmd in $(find ${supportdir}/${jmodimagepath} -name '*.jmod_exec.cmdline') \
+                   ${supportdir}/${jmodimagepath}/*java.base*exec.cmdline ; do
             pre=${cmd/_exec/_pre};
             post=${cmd/_exec/_post};
             jmod=$(echo ${cmd}|sed 's#.*_create_##'|sed 's#_exec.cmdline##')
             echo "Rebuilding ${jmod} against stripped binaries...";
             if [ -e ${pre} ] ; then
-                echo "Executing ${pre}...";
+                echo -e "Executing ${pre}...\n$(cat ${pre})";
                 cat ${pre} | sh -s ;
             fi
-            echo "Executing ${cmd}...";
+            echo "Executing ${cmd}...$(cat ${cmd})";
             cat ${cmd} | sh -s ;
             if [ -e ${post} ] ; then
-                echo "Executing ${post}...";
+                echo -e "Executing ${post}...\n$(cat ${post})";
                 cat ${post} | sh -s ;
             fi
         done
-        rm -rf ${jdkimagepath}/jmods
-        cp -a ${jmodimagepath} ${jdkimagepath}
+
+        # Rebuild the image with the stripped modules
+        for image in ${jdkimagepath} ${jreimagepath} ; do
+            outdir=${outputdir}/${image};
+            jlink=${supportdir}/${image}/_jlink*_exec.cmdline;
+            # Backup the existing image as it contains
+            # files not generated by jlink
+            mv ${outdir}{,.bak};
+            # Regenerate the image using the command
+            # generated using the initial build
+            echo -e "Executing ${jlink}...\n$(cat ${jlink})";
+            cat ${jlink} | sh -s;
+            # Move the new jmods and module file from the new
+            # image to the old one
+            if [ -e ${outdir}.bak/jmods ] ; then
+                rm -rf ${outdir}.bak/jmods;
+                mv ${outdir}/jmods ${outdir}.bak;
+            fi
+            rm -f ${outdir}.bak/${modulefile};
+            mv ${outdir}/${modulefile} ${outdir}.bak/$(dirname ${modulefile});
+            # Restore the original image
+            rm -rf ${outdir};
+            mv ${outdir}{.bak,};
+            # Update the CDS archives
+            for cmd in ${supportdir}/${image}/*_gen_cds*_exec.cmdline ; do
+                echo -e "Executing ${cmd}...\n$(cat ${cmd})";
+                cat ${cmd} | sh -s;
+            done
+        done
     fi
 }
 
@@ -1295,6 +1329,7 @@ function createtar() {
     local archive=${2}
     local filter=${3}
     local transform=${4}
+    local exclude=${5}
 
     if [ "x${filter}" != "x" ] ; then
         local filteroption="-name ${filter}";
@@ -1302,9 +1337,12 @@ function createtar() {
     if [ "x${transform}" != "x" ] ; then
         local transoption="--transform ${transform}";
     fi
+    if [ "x${exclude}" != "x" ] ; then
+        local excludeoption="--exclude=${exclude}";
+    fi
 
     local common_tar_opts="--owner=0 --group=0 --numeric-owner \
-                           ${transoption} --create --xz"
+                           ${transoption} ${excludeoption} --create --xz"
     # Capture tar version, removing the decimal point (so 1.28 => 128)
     tarver=$(tar --version|head -n1|sed -re 's|tar \(GNU tar\) ([0-9]).([0-9]*)|\1\2|')
     echo "Detected tar ${tarver}"
@@ -1356,17 +1394,10 @@ function packagejdk() {
     jrearchive=${packagesdir}/%{jreportablearchive -- "$nameSuffix"}
     staticname=%{staticlibsportablename -- "$nameSuffix"}
     staticarchive=${packagesdir}/%{staticlibsportablearchive -- "$nameSuffix"}
-    debugarchive=${packagesdir}/%{jdkportablearchive -- "${nameSuffix}.debuginfo"}
-    unstrippedarchive=${packagesdir}/%{jdkportablearchive -- "${nameSuffix}.unstripped"}
-    # We only use docs for the release build
-    docname=%{docportablename}
-    docarchive=${packagesdir}/%{docportablearchive}
-    built_doc_archive=jdk-%{filever}%{ea_designator_zip}+%{buildver}%{lts_designator_zip}-docs.zip
-    # These are from the source tree so no debug variants
-    miscname=%{miscportablename}
-    miscarchive=${packagesdir}/%{miscportablearchive}
 
     if [ "x$suffix" = "x" ] ; then
+        unstrippedarchive=${packagesdir}/%{jdkportablearchive -- "${nameSuffix}.unstripped"}
+
         # Keep the unstripped version for consumption by RHEL RPMs
         mv %{jdkimage}.unstripped ${jdkname}
         createtar ${jdkname} ${unstrippedarchive}
@@ -1380,6 +1411,15 @@ function packagejdk() {
 
     # Release images have external debug symbols
     if [ "x$suffix" = "x" ] ; then
+        debugarchive=${packagesdir}/%{jdkportablearchive -- "${nameSuffix}.debuginfo"}
+        # We only use docs for the release build
+        docname=%{docportablename}
+        docarchive=${packagesdir}/%{docportablearchive}
+        built_doc_archive=jdk-%{filever}%{ea_designator_zip}+%{buildver}%{lts_designator_zip}-docs.zip
+        # These are from the source tree so no debug variants
+        miscname=%{miscportablename}
+        miscarchive=${packagesdir}/%{miscportablearchive}
+
         createtar ${jdkname} ${debugarchive} \*.debuginfo
         genchecksum ${debugarchive}
 
@@ -1401,10 +1441,10 @@ function packagejdk() {
         genchecksum ${miscarchive}
     fi
 
-    createtar ${jdkname} ${jdkarchive}
+    createtar ${jdkname} ${jdkarchive} "" "" "**.debuginfo"
     genchecksum ${jdkarchive}
 
-    createtar ${jrename} ${jrearchive}
+    createtar ${jrename} ${jrearchive} "" "" "**.debuginfo"
     genchecksum ${jrearchive}
 
 %if %{include_staticlibs}
@@ -1516,30 +1556,63 @@ export JAVA_HOME=${top_dir_abs_main_build_path}/images/%{jdkimage}
 
 # Check Shenandoah is enabled
 %if %{use_shenandoah_hotspot}
-$JAVA_HOME//bin/java -XX:+UnlockExperimentalVMOptions -XX:+UseShenandoahGC -version
+$JAVA_HOME/bin/java -XX:+UnlockExperimentalVMOptions -XX:+UseShenandoahGC -version
 %endif
 
-# Check unlimited policy has been used
-$JAVA_HOME/bin/javac -d . %{SOURCE13}
-$JAVA_HOME/bin/java --add-opens java.base/javax.crypto=ALL-UNNAMED TestCryptoLevel
+# Only test on one architecture (the fastest) for Java only tests
+%ifarch %{jdk_test_arch}
 
-# Check ECC is working
-$JAVA_HOME/bin/javac -d . %{SOURCE14}
-$JAVA_HOME/bin/java $(echo $(basename %{SOURCE14})|sed "s|\.java||")
+  # Check unlimited policy has been used
+  $JAVA_HOME/bin/javac -d . %{SOURCE13}
+  $JAVA_HOME/bin/java --add-opens java.base/javax.crypto=ALL-UNNAMED TestCryptoLevel
 
-# Check system crypto (policy) is active and can be disabled
-# Test takes a single argument - true or false - to state whether system
-# security properties are enabled or not.
-$JAVA_HOME/bin/javac -d . %{SOURCE15}
-export PROG=$(echo $(basename %{SOURCE15})|sed "s|\.java||")
-export SEC_DEBUG="-Djava.security.debug=properties"
-# Specific to portable:System security properties to be off by default
-$JAVA_HOME/bin/java ${SEC_DEBUG} ${PROG} false
-$JAVA_HOME/bin/java ${SEC_DEBUG} -Djava.security.disableSystemPropertiesFile=true ${PROG} false
+  # Check ECC is working
+  $JAVA_HOME/bin/javac -d . %{SOURCE14}
+  $JAVA_HOME/bin/java $(echo $(basename %{SOURCE14})|sed "s|\.java||")
 
-# Check correct vendor values have been set
-$JAVA_HOME/bin/javac -d . %{SOURCE16}
-$JAVA_HOME/bin/java $(echo $(basename %{SOURCE16})|sed "s|\.java||") "%{oj_vendor}" "%{oj_vendor_url}" "%{oj_vendor_bug_url}" "%{oj_vendor_version}"
+  # Check system crypto (policy) is active and can be disabled
+  # Test takes a single argument - true or false - to state whether system
+  # security properties are enabled or not.
+  $JAVA_HOME/bin/javac -d . %{SOURCE15}
+  export PROG=$(echo $(basename %{SOURCE15})|sed "s|\.java||")
+  export SEC_DEBUG="-Djava.security.debug=properties"
+  # Specific to portable:System security properties to be off by default
+  $JAVA_HOME/bin/java ${SEC_DEBUG} ${PROG} false
+  $JAVA_HOME/bin/java ${SEC_DEBUG} -Djava.security.disableSystemPropertiesFile=true ${PROG} false
+
+  # Check correct vendor values have been set
+  $JAVA_HOME/bin/javac -d . %{SOURCE16}
+  $JAVA_HOME/bin/java $(echo $(basename %{SOURCE16})|sed "s|\.java||") "%{oj_vendor}" "%{oj_vendor_url}" "%{oj_vendor_bug_url}" "%{oj_vendor_version}"
+
+%if ! 0%{?flatpak}
+  # Check translations are available for new timezones (during flatpak builds, the
+  # tzdb.dat used by this test is not where the test expects it, so this is
+  # disabled for flatpak builds)
+  # Disable test until we are on the latest JDK
+  $JAVA_HOME/bin/javac -d . %{SOURCE18}
+  $JAVA_HOME/bin/java $(echo $(basename %{SOURCE18})|sed "s|\.java||") JRE
+  $JAVA_HOME/bin/java -Djava.locale.providers=CLDR $(echo $(basename %{SOURCE18})|sed "s|\.java||") CLDR
+%endif
+
+  # Check src.zip has all sources. See RHBZ#1130490
+  unzip -l $JAVA_HOME/lib/src.zip | grep 'sun.misc.Unsafe'
+
+  # Check class files include useful debugging information
+  $JAVA_HOME/bin/javap -l java.lang.Object | grep "Compiled from"
+  $JAVA_HOME/bin/javap -l java.lang.Object | grep LineNumberTable
+  $JAVA_HOME/bin/javap -l java.lang.Object | grep LocalVariableTable
+
+  # Check generated class files include useful debugging information
+  $JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep "Compiled from"
+  $JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LineNumberTable
+  $JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LocalVariableTable
+
+%else
+
+  # Just run a basic java -version test on other architectures
+  $JAVA_HOME/bin/java -version
+
+%endif
 
 # Check java launcher has no SSB mitigation
 if ! nm $JAVA_HOME/bin/java | grep set_speculation ; then true ; else false; fi
@@ -1550,16 +1623,6 @@ if ! nm $JAVA_HOME/bin/java | grep set_speculation ; then true ; else false; fi
 nm %{altjavaoutputdir}/%{alt_java_name} | grep prctl
 %else
 if ! nm %{altjavaoutputdir}/%{alt_java_name} | grep prctl ; then true ; else false; fi
-%endif
-
-%if ! 0%{?flatpak}
-# Check translations are available for new timezones (during flatpak builds, the
-# tzdb.dat used by this test is not where the test expects it, so this is
-# disabled for flatpak builds)
-# Disable test until we are on the latest JDK
-$JAVA_HOME/bin/javac -d . %{SOURCE18}
-$JAVA_HOME/bin/java $(echo $(basename %{SOURCE18})|sed "s|\.java||") JRE
-$JAVA_HOME/bin/java -Djava.locale.providers=CLDR $(echo $(basename %{SOURCE18})|sed "s|\.java||") CLDR
 %endif
 
 %if %{include_staticlibs}
@@ -1642,19 +1705,6 @@ EOF
 grep 'JavaCallWrapper::JavaCallWrapper' gdb.out
 %endif
 
-# Check src.zip has all sources. See RHBZ#1130490
-unzip -l $JAVA_HOME/lib/src.zip | grep 'sun.misc.Unsafe'
-
-# Check class files include useful debugging information
-$JAVA_HOME/bin/javap -l java.lang.Object | grep "Compiled from"
-$JAVA_HOME/bin/javap -l java.lang.Object | grep LineNumberTable
-$JAVA_HOME/bin/javap -l java.lang.Object | grep LocalVariableTable
-
-# Check generated class files include useful debugging information
-$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep "Compiled from"
-$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LineNumberTable
-$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LocalVariableTable
-
 # build cycles check
 done
 
@@ -1670,12 +1720,10 @@ for suffix in %{build_loop} ; do
         nameSuffix=`echo "$suffix"| sed s/-/./`
     fi
 
-    # These definitions should match those in installjdk
+    # These definitions should match those in packagejdk
     jdkarchive=${packagesdir}/%{jdkportablearchive -- "$nameSuffix"}
     jrearchive=${packagesdir}/%{jreportablearchive -- "$nameSuffix"}
     staticarchive=${packagesdir}/%{staticlibsportablearchive -- "$nameSuffix"}
-    debugarchive=${packagesdir}/%{jdkportablearchive -- "${nameSuffix}.debuginfo"}
-    unstrippedarchive=${packagesdir}/%{jdkportablearchive -- "${nameSuffix}.unstripped"}
 
     mkdir -p $RPM_BUILD_ROOT%{_jvmdir}
 
@@ -1690,22 +1738,22 @@ for suffix in %{build_loop} ; do
 %endif
 
     if [ "x$suffix" = "x" ] ; then
+        # These definitions should match those in packagejdk
+        debugarchive=${packagesdir}/%{jdkportablearchive -- "${nameSuffix}.debuginfo"}
+        unstrippedarchive=${packagesdir}/%{jdkportablearchive -- "${nameSuffix}.unstripped"}
+        docarchive=${packagesdir}/%{docportablearchive}
+        miscarchive=${packagesdir}/%{miscportablearchive}
+
         mv ${debugarchive} $RPM_BUILD_ROOT%{_jvmdir}/
         mv ${debugarchive}.sha256sum $RPM_BUILD_ROOT%{_jvmdir}/
         mv ${unstrippedarchive} $RPM_BUILD_ROOT%{_jvmdir}/
         mv ${unstrippedarchive}.sha256sum $RPM_BUILD_ROOT%{_jvmdir}/
+        mv ${docarchive} $RPM_BUILD_ROOT%{_jvmdir}/
+        mv ${docarchive}.sha256sum $RPM_BUILD_ROOT%{_jvmdir}/
+        mv ${miscarchive} $RPM_BUILD_ROOT%{_jvmdir}/
+        mv ${miscarchive}.sha256sum $RPM_BUILD_ROOT%{_jvmdir}/
     fi
 done
-
-# These definitions should match those in installjdk
-# Install outside the loop as there are no debug variants
-docarchive=${packagesdir}/%{docportablearchive}
-miscarchive=${packagesdir}/%{miscportablearchive}
-
-mv ${docarchive} $RPM_BUILD_ROOT%{_jvmdir}/
-mv ${docarchive}.sha256sum $RPM_BUILD_ROOT%{_jvmdir}/
-mv ${miscarchive} $RPM_BUILD_ROOT%{_jvmdir}/
-mv ${miscarchive}.sha256sum $RPM_BUILD_ROOT%{_jvmdir}/
 
 # To show sha in the build log
 for file in `ls $RPM_BUILD_ROOT%{_jvmdir}/*.sha256sum` ; do
@@ -1724,6 +1772,8 @@ done
 # placeholder
 %endif
 
+%if %{include_normal_build}
+
 %files devel
 %{_jvmdir}/%{jdkportablearchive -- %%{nil}}
 %{_jvmdir}/%{jdkportablearchive -- .debuginfo}
@@ -1739,6 +1789,16 @@ done
 %files unstripped
 %{_jvmdir}/%{jdkportablearchive -- .unstripped}
 %{_jvmdir}/%{jdkportablearchive -- .unstripped}.sha256sum
+
+%files docs
+%{_jvmdir}/%{docportablearchive}
+%{_jvmdir}/%{docportablearchive}.sha256sum
+
+%files misc
+%{_jvmdir}/%{miscportablearchive}
+%{_jvmdir}/%{miscportablearchive}.sha256sum
+
+%endif
 
 %if %{include_debug_build}
 
@@ -1776,15 +1836,45 @@ done
 
 %endif
 
-%files docs
-%{_jvmdir}/%{docportablearchive}
-%{_jvmdir}/%{docportablearchive}.sha256sum
-
-%files misc
-%{_jvmdir}/%{miscportablearchive}
-%{_jvmdir}/%{miscportablearchive}.sha256sum
-
 %changelog
+* Fri Jul 12 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.4.0.7-1
+- Update to jdk-21.0.4+7 (GA)
+- Update release notes to 21.0.4+7
+- Switch to GA mode.
+- ** This tarball is embargoed until 2024-07-16 @ 1pm PT. **
+- Resolves: OPENJDK-2756
+- Resolves: OPENJDK-3163
+
+* Wed Jun 26 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.4.0.5-0.1.ea
+- Update to jdk-21.0.4+5 (EA)
+- Update release notes to 21.0.4+5
+- Move unstripped, misc and doc tarball handling into normal build / no suffix blocks
+- Limit Java only tests to one architecture using jdk_test_arch
+- Drop unneeded tzdata-java build dependency following 3e3cf8fa2df7bac2f6a60a0ddd596ec39228a3e1
+- Resolves: OPENJDK-3132
+- Resolves: OPENJDK-3194
+- Resolves: OPENJDK-3181
+- Resolves: OPENJDK-3189
+
+* Sat Jun 22 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.4.0.1-0.1.ea
+- Update to jdk-21.0.4+1 (EA)
+- Update release notes to 21.0.4+1
+- Switch to EA mode
+- Bump LCMS 2 version to 2.16.0 following JDK-8321489
+- Add zlib build requirement or bundled version (1.3.1), depending on system_libs setting
+- Resolves: OPENJDK-3060
+- Resolves: OPENJDK-3063
+
+* Tue Jun 11 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.3.0.9-3
+- Re-run jlink to regenerate the jmods directory and lib/modules with stripped libraries
+- Rebuild CDS archives against the updated lib/modules
+- Resolves: OPENJDK-2829
+
+* Wed May 01 2024 Thomas Fitzsimmons <fitzsim@redhat.com> - 1:21.0.3.0.9-2
+- createtar: Add exclude option
+- packagejdk: Exclude debuginfo when creating jdkarchive and jrearchive tarballs
+- Resolves: OPENJDK-2995
+
 * Sat Apr 13 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.3.0.9-1
 - Update to jdk-21.0.3+9 (GA)
 - Update release notes to 21.0.3+9
