@@ -142,6 +142,8 @@
 %global svml_arches x86_64
 # Set of architectures where we verify backtraces with gdb
 %global gdb_arches %{jit_arches} %{zero_arches}
+# Architecture on which we run Java only tests
+%global jdk_test_arch x86_64
 
 # Define the OS the portable JDK is built on
 # This is undefined for openjdk-portable-rhel-8 builds and
@@ -305,7 +307,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 3
+%global updatever 4
 %global patchver 0
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
 # We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
@@ -355,7 +357,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        9
+%global buildver        7
 %global rpmrelease      1
 # Settings used by the portable build
 %global portablerelease 1
@@ -1146,8 +1148,7 @@ Requires: ca-certificates
 Requires: javapackages-filesystem
 # Require zone-info data provided by tzdata-java sub-package
 # 2024a required as of JDK-8325150
-# Use 2023d until 2024a is in the buildroot
-Requires: tzdata-java >= 2023d
+Requires: tzdata-java >= 2024a
 # for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
@@ -1345,6 +1346,7 @@ Source18: TestTranslations.java
 # Include portable spec and instructions on how to rebuild
 Source19: README.md
 Source20: java-%{featurever}-openjdk-portable.specfile
+Source21: NEWS
 
 # Setup variables to reference correct sources
 %global releasezip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.unstripped.jdk.%{_arch}.tar.xz
@@ -1468,8 +1470,7 @@ BuildRequires: %{pkgnameroot}-misc = %{epoch}:%{version}-%{prelease}.%{portables
 BuildRequires: libffi-devel
 %endif
 # 2024a required as of JDK-8325150
-# Use 2023d until 2024a is in the buildroot
-BuildRequires: tzdata-java >= 2023d
+BuildRequires: tzdata-java >= 2024a
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -1485,6 +1486,7 @@ BuildRequires: harfbuzz-devel
 BuildRequires: lcms2-devel
 BuildRequires: libjpeg-devel
 BuildRequires: libpng-devel
+BuildRequires: zlib-devel
 %else
 # Version in src/java.desktop/share/legal/freetype.md
 Provides: bundled(freetype) = 2.13.2
@@ -1493,11 +1495,13 @@ Provides: bundled(giflib) = 5.2.1
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
 Provides: bundled(harfbuzz) = 8.2.2
 # Version in src/java.desktop/share/native/liblcms/lcms2.h
-Provides: bundled(lcms2) = 2.15.0
+Provides: bundled(lcms2) = 2.16.0
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
 Provides: bundled(libjpeg) = 6b
 # Version in src/java.desktop/share/native/libsplashscreen/libpng/png.h
 Provides: bundled(libpng) = 1.6.40
+# Version in src/java.base/share/native/libzip/zlib/zlib.h
+Provides: bundled(zlib) = 1.3.1
 %endif
 
 # this is always built, also during debug-only build
@@ -2009,22 +2013,59 @@ export JAVA_HOME=$(pwd)/%{installoutputdir -- ${suffix}}
 $JAVA_HOME/bin/java -XX:+UnlockExperimentalVMOptions -XX:+UseShenandoahGC -version
 %endif
 
-# Check unlimited policy has been used
-$JAVA_HOME/bin/javac -d . %{SOURCE13}
-$JAVA_HOME/bin/java --add-opens java.base/javax.crypto=ALL-UNNAMED TestCryptoLevel
+# Only test on one architecture (the fastest) for Java only tests
+%ifarch %{jdk_test_arch}
 
-# Check ECC is working
-$JAVA_HOME/bin/javac -d . %{SOURCE14}
-$JAVA_HOME/bin/java $(echo $(basename %{SOURCE14})|sed "s|\.java||")
+  # Check unlimited policy has been used
+  $JAVA_HOME/bin/javac -d . %{SOURCE13}
+  $JAVA_HOME/bin/java --add-opens java.base/javax.crypto=ALL-UNNAMED TestCryptoLevel
 
-# Check system crypto (policy) is active and can be disabled
-# Test takes a single argument - true or false - to state whether system
-# security properties are enabled or not.
-$JAVA_HOME/bin/javac -d . %{SOURCE15}
-export PROG=$(echo $(basename %{SOURCE15})|sed "s|\.java||")
-export SEC_DEBUG="-Djava.security.debug=properties"
-$JAVA_HOME/bin/java ${SEC_DEBUG} ${PROG} true
-$JAVA_HOME/bin/java ${SEC_DEBUG} -Djava.security.disableSystemPropertiesFile=true ${PROG} false
+  # Check ECC is working
+  $JAVA_HOME/bin/javac -d . %{SOURCE14}
+  $JAVA_HOME/bin/java $(echo $(basename %{SOURCE14})|sed "s|\.java||")
+
+  # Check system crypto (policy) is active and can be disabled
+  # Test takes a single argument - true or false - to state whether system
+  # security properties are enabled or not.
+  $JAVA_HOME/bin/javac -d . %{SOURCE15}
+  export PROG=$(echo $(basename %{SOURCE15})|sed "s|\.java||")
+  export SEC_DEBUG="-Djava.security.debug=properties"
+  $JAVA_HOME/bin/java ${SEC_DEBUG} ${PROG} true
+  $JAVA_HOME/bin/java ${SEC_DEBUG} -Djava.security.disableSystemPropertiesFile=true ${PROG} false
+
+  # Check correct vendor values have been set
+  $JAVA_HOME/bin/javac -d . %{SOURCE16}
+  $JAVA_HOME/bin/java $(echo $(basename %{SOURCE16})|sed "s|\.java||") "%{oj_vendor}" "%{oj_vendor_url}" "%{oj_vendor_bug_url}" "%{oj_vendor_version}"
+
+%if ! 0%{?flatpak}
+  # Check translations are available for new timezones (during flatpak builds, the
+  # tzdb.dat used by this test is not where the test expects it, so this is
+  # disabled for flatpak builds)
+  # Disable test until we are on the latest JDK
+  $JAVA_HOME/bin/javac -d . %{SOURCE18}
+  $JAVA_HOME/bin/java $(echo $(basename %{SOURCE18})|sed "s|\.java||") JRE
+  $JAVA_HOME/bin/java -Djava.locale.providers=CLDR $(echo $(basename %{SOURCE18})|sed "s|\.java||") CLDR
+%endif
+
+  # Check src.zip has all sources. See RHBZ#1130490
+  unzip -l $JAVA_HOME/lib/src.zip | grep 'sun.misc.Unsafe'
+
+  # Check class files include useful debugging information
+  $JAVA_HOME/bin/javap -l java.lang.Object | grep "Compiled from"
+  $JAVA_HOME/bin/javap -l java.lang.Object | grep LineNumberTable
+  $JAVA_HOME/bin/javap -l java.lang.Object | grep LocalVariableTable
+
+  # Check generated class files include useful debugging information
+  $JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep "Compiled from"
+  $JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LineNumberTable
+  $JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LocalVariableTable
+
+%else
+
+  # Just run a basic java -version test on other architectures
+  $JAVA_HOME/bin/java -version
+
+%endif
 
 # Check java launcher has no SSB mitigation
 if ! nm $JAVA_HOME/bin/java | grep set_speculation ; then true ; else false; fi
@@ -2036,16 +2077,6 @@ alt_java_binary=$RPM_BUILD_ROOT%{jrebindir -- $suffix}/%{alt_java_name}
 nm ${alt_java_binary} | grep prctl
 %else
 if ! nm ${alt_java_binary} | grep prctl ; then true ; else false; fi
-%endif
-
-%if ! 0%{?flatpak}
-# Check translations are available for new timezones (during flatpak builds, the
-# tzdb.dat used by this test is not where the test expects it, so this is
-# disabled for flatpak builds)
-# Disable test until we are on the latest JDK
-$JAVA_HOME/bin/javac -d . %{SOURCE18}
-$JAVA_HOME/bin/java $(echo $(basename %{SOURCE18})|sed "s|\.java||") JRE
-$JAVA_HOME/bin/java -Djava.locale.providers=CLDR $(echo $(basename %{SOURCE18})|sed "s|\.java||") CLDR
 %endif
 
 %if %{include_staticlibs}
@@ -2121,19 +2152,6 @@ EOF
 %ifarch %{gdb_arches}
 grep 'JavaCallWrapper::JavaCallWrapper' gdb.out
 %endif
-
-# Check src.zip has all sources. See RHBZ#1130490
-unzip -l $JAVA_HOME/lib/src.zip | grep 'sun.misc.Unsafe'
-
-# Check class files include useful debugging information
-$JAVA_HOME/bin/javap -l java.lang.Object | grep "Compiled from"
-$JAVA_HOME/bin/javap -l java.lang.Object | grep LineNumberTable
-$JAVA_HOME/bin/javap -l java.lang.Object | grep LocalVariableTable
-
-# Check generated class files include useful debugging information
-$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep "Compiled from"
-$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LineNumberTable
-$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LocalVariableTable
 
 # build cycles check
 done
@@ -2497,13 +2515,41 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Fri Jul 12 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.4.0.7-1
+- Update to jdk-21.0.4+7 (GA)
+- Update release notes to 21.0.4+7
+- Switch to GA mode.
+- Sync the copy of the portable specfile with the latest update
+- Add missing section headers in NEWS
+- ** This tarball is embargoed until 2024-07-16 @ 1pm PT. **
+- Resolves: RHEL-47022
+
+* Wed Jun 26 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.4.0.5-0.1.ea
+- Update to jdk-21.0.4+5 (EA)
+- Update release notes to 21.0.4+5
+- Limit Java only tests to one architecture using jdk_test_arch
+- Actually require tzdata 2024a now it is available in the buildroot
+- Resolves: RHEL-45356
+- Resolves: RHEL-47399
+
+* Sat Jun 22 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.4.0.1-0.1.ea
+- Update to jdk-21.0.4+1 (EA)
+- Update release notes to 21.0.4+1
+- Switch to EA mode
+- Bump LCMS 2 version to 2.16.0 following JDK-8321489
+- Add zlib build requirement or bundled version (1.3.1), depending on system_libs setting
+- Restore NEWS file so portable can be rebuilt
+- Sync the copy of the portable specfile with the latest update
+- Related: RHEL-45356
+- Resolves: RHEL-46028
+
 * Sun Apr 14 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.3.0.9-1
 - Update to jdk-21.0.3+9 (GA)
 - Update release notes to 21.0.3+9
 - Switch to GA mode.
 - Sync the copy of the portable specfile with the latest update
 - ** This tarball is embargoed until 2024-04-16 @ 1pm PT. **
-- Resolves: RHEL-32423
+- Resolves: RHEL-32424
 
 * Sun Apr 14 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.3.0.7-0.1.ea
 - Update to jdk-21.0.3+7 (EA)
@@ -2512,7 +2558,7 @@ cjc.mainProgram(args)
 - Only require tzdata 2023d for now as 2024a is unavailable in buildroot
 - Drop JDK-8009550 which is now available upstream
 - Re-generate FIPS patch against 21.0.3+7 following backport of JDK-8325254
-- Resolves: RHEL-30945
+- Resolves: RHEL-30946
 
 * Sun Apr 14 2024 Thomas Fitzsimmons <fitzsim@redhat.com> - 1:21.0.3.0.1-0.2.ea
 - Invoke xz in multi-threaded mode
@@ -2543,7 +2589,7 @@ cjc.mainProgram(args)
 - generate_source_tarball.sh: Use long-style argument to grep
 - generate_source_tarball.sh: Add license
 - generate_source_tarball.sh: Add indentation instructions for Emacs
-- Related: RHEL-30945
+- Related: RHEL-30946
 
 * Sun Apr 14 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.3.0.1-0.2.ea
 - Install alt-java man page from the misc tarball as it is no longer in the JDK image
@@ -2567,7 +2613,7 @@ cjc.mainProgram(args)
 - generate_source_tarball.sh: Output values of new options WITH_TEMP and OPENJDK_LATEST
 - generate_source_tarball.sh: Double-quote DEPTH reference (SC2086)
 - generate_source_tarball.sh: Avoid empty DEPTH reference while still appeasing shellcheck
-- Related: RHEL-30945
+- Related: RHEL-30946
 
 * Sun Apr 14 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.3.0.1-0.1.ea
 - Update to jdk-21.0.3+1 (EA)
@@ -2575,11 +2621,11 @@ cjc.mainProgram(args)
 - Switch to EA mode
 - Require tzdata 2023d due to upstream inclusion of JDK-8322725
 - Bump FreeType version to 2.13.2 following JDK-8316028
-- Related: RHEL-30945
+- Related: RHEL-30946
 
 * Fri Apr 12 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.2.0.13-2
 - Define portablesuffix according to whether pkgos is defined or not
-- Related: RHEL-30945
+- Related: RHEL-30946
 
 * Tue Jan 09 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.2.0.13-1
 - Update to jdk-21.0.2+13 (GA)
@@ -2588,17 +2634,17 @@ cjc.mainProgram(args)
 - Bump HarfBuzz version to 8.2.2 following JDK-8313643
 - Drop local JDK-8311630 patch which is now upstream
 - ** This tarball is embargoed until 2024-01-16 @ 1pm PT. **
-- Resolves: RHEL-20998
+- Resolves: RHEL-20999
 
 * Mon Nov 06 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.1.0.12-3
 - Include JDK-8311630 patch to implement Foreign Function & Memory preview API on s390x
 - Sync the copy of the portable specfile with the latest update
-- Resolves: RHEL-16386
+- Resolves: RHEL-16290
 
 * Mon Oct 30 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.1.0.12-2
 - Switch to using portable binaries built on RHEL 7
 - Sync the copy of the portable specfile with the RHEL 7 version
-- Related: RHEL-12997
+- Related: RHEL-12998
 
 * Fri Oct 27 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.1.0.12-1
 - Update to jdk-21.0.1.0+12 (GA)
@@ -2620,21 +2666,21 @@ cjc.mainProgram(args)
 - Add missing jfr, jpackage and jwebserver alternative ghosts
 - Move jcmd to the headless package
 - Revert alt-java binary location to being within the JDK tree
-- Resolves: RHEL-12997
-- Resolves: RHEL-14954
-- Resolves: RHEL-14962
-- Resolves: RHEL-14958
-- Related: RHEL-14946
-- Resolves: RHEL-14959
-- Resolves: RHEL-14948
+- Resolves: RHEL-12998
+- Resolves: RHEL-14953
+- Resolves: RHEL-13925
+- Resolves: RHEL-14957
+- Related: RHEL-14945
+- Resolves: RHEL-11321
+- Resolves: RHEL-14947
 
 * Fri Oct 27 2023 Jiri Vanek <jvanek@redhat.com> - 1:21.0.1.0.12-1
 - Exclude classes_nocoops.jsa on i686 and arm32
-- Related: RHEL-14946
+- Related: RHEL-14945
 
 * Fri Oct 27 2023 Severin Gehwolf <sgehwolf@redhat.com> - 1:21.0.1.0.12-1
 - Fix packaging of CDS archives
-- Resolves: RHEL-14946
+- Resolves: RHEL-14945
 
 * Thu Aug 24 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.0.0.35-2
 - Update documentation (README.md)
@@ -2645,7 +2691,7 @@ cjc.mainProgram(args)
 - * No use of system libjpeg turbo to warrant RH649512 patch any more
 - Replace RH1684077 pcsc-lite-libs patch with better JDK-8009550 fix being upstreamed
 - Adapt alt-java test to new binary where there is always a set_speculation function
-- Related: RHEL-12997
+- Related: RHEL-12998
 
 * Mon Aug 21 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.0.0.35-1
 - Update to jdk-21.0.0+35
@@ -2657,11 +2703,11 @@ cjc.mainProgram(args)
 - Re-enable tzdata tests now we are on the latest JDK and things are back in sync
 - Install jaxp.properties introduced by JDK-8303530
 - Install lible.so introduced by JDK-8306983
-- Related: RHEL-12997
+- Related: RHEL-12998
 
 * Mon Aug 21 2023 Petra Alice Mikova <pmikova@redhat.com> - 1:21.0.0.0.35-1
 - Replace smoke test files used in the staticlibs test, as fdlibm was removed by JDK-8303798
-- Related: RHEL-12997
+- Related: RHEL-12998
 
 * Wed Aug 16 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:20.0.0.0.36-1
 - Update to jdk-20.0.2+9
@@ -2669,12 +2715,12 @@ cjc.mainProgram(args)
 - Update system crypto policy & FIPS patch from new fips-20u tree
 - Update generate_tarball.sh ICEDTEA_VERSION
 - Update CLDR reference data following update to 42 (Rocky Mountain-Normalzeit => Rocky-Mountain-Normalzeit)
-- Related: RHEL-12997
+- Related: RHEL-12998
 
 * Wed Aug 16 2023 Jiri Vanek <jvanek@redhat.com> - 1:20.0.0.0.36-1
 - Dropped JDK-8295447, JDK-8296239 & JDK-8299439 patches now upstream
 - Adapted rh1750419-redhat_alt_java.patch
-- Related: RHEL-12997
+- Related: RHEL-12998
 
 * Tue Aug 15 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:19.0.1.0.10-1
 - Update to jdk-19.0.2 release
@@ -2683,7 +2729,7 @@ cjc.mainProgram(args)
 - Remove references to sample directory removed by JDK-8284999
 - Add local patch JDK-8295447 (javac NPE) which was accepted into 19u upstream but not in the GA tag
 - Add local patches for JDK-8296239 & JDK-8299439 (Croatia Euro update) which are present in 8u, 11u & 17u releases
-- Related: RHEL-12997
+- Related: RHEL-12998
 
 * Thu Aug 10 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:18.0.2.0.9-1
 - Update to jdk-18.0.2 release
@@ -2694,17 +2740,21 @@ cjc.mainProgram(args)
 - Drop tzdata patches added for 17.0.7 which will eventually appear in the upstream tarball when we reach OpenJDK 21
 - Disable tzdata tests until we are on the latest JDK and things are back in sync
 - Use empty nss.fips.cfg until it is again available via the FIPS patch
-- Related: RHEL-12997
+- Related: RHEL-12998
 
 * Thu Aug 10 2023 Petra Alice Mikova <pmikova@redhat.com> - 1:18.0.2.0.9-1
 - Update to ea version of jdk18
 - Add new slave jwebserver and corresponding manpage
 - Adjust rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-devel.patch
-- Related: RHEL-12997
+- Related: RHEL-12998
 
 * Thu Aug 10 2023 FeRD (Frank Dana) <ferdnyc@gmail.com> - 1:18.0.2.0.9-1
 - Add javaver- and origin-specific javadoc and javadoczip alternatives.
-- Related: RHEL-12997
+- Related: RHEL-12998
+
+* Tue Aug 08 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.7.0.7-4
+- Set portablerelease and portablerhel to use the CentOS 9 build
+- Related: RHEL-12998
 
 * Tue Aug 08 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.7.0.7-4
 - Add files missed by centpkg import.
