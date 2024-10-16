@@ -145,11 +145,6 @@
 # Architecture on which we run Java only tests
 %global jdk_test_arch x86_64
 
-# Define the OS the portable JDK is built on
-# This is undefined for openjdk-portable-rhel-8 builds and
-# equals 'rhel7' for openjdk-portable-rhel-7 builds
-%global pkgos rhel7
-
 # By default, we build a debug build during main build on JIT architectures
 %if %{with slowdebug}
 %ifarch %{debug_arches}
@@ -227,7 +222,13 @@
 %global hotspot_target hotspot
 
 # debugedit tool for rewriting ELF file paths
+%if 0%{?rhel} >= 10
+# From RHEL 10, the tool is in its own package installed in the usual location
+%global debugedit %{_bindir}/debugedit
+%else
+# On earlier versions of RHEL, it is part of the rpm package
 %global debugedit %{_rpmconfigdir}/debugedit
+%endif
 
 # Filter out flags from the optflags macro that cause problems with the OpenJDK build
 # We filter out -O flags so that the optimization of HotSpot is not lowered from O3 to O2
@@ -307,7 +308,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 4
+%global updatever 5
 %global patchver 0
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
 # We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
@@ -352,16 +353,28 @@
 # The tag used to create the OpenJDK tarball
 %global vcstag jdk-%{filever}+%{buildver}%{?tagsuffix:-%{tagsuffix}}
 
+# Define the OS the portable JDK is built on
+# This is undefined for CentOS & openjdk-portable-rhel-8 builds and
+# equals 'rhel7' for openjdk-portable-rhel-7 builds
+%if 0%{?centos} == 0
+%global pkgos rhel7
+%endif
+
 # Standard JPackage naming and versioning defines
 %global origin          openjdk
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        7
-%global rpmrelease      1
+%global buildver        10
+%global rpmrelease      3
 # Settings used by the portable build
 %global portablerelease 1
+# Portable suffix differs between RHEL and CentOS
+%if 0%{?centos} == 0
 %global portablesuffix %{?pkgos:el7_9}%{!?pkgos:el8}
+%else
+%global portablesuffix el8
+%endif
 %global portablebuilddir /builddir/build/BUILD
 
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
@@ -1108,9 +1121,6 @@ exit 0
 %endif
 }
 
-# x86 is not supported by OpenJDK 17
-ExcludeArch: %{ix86}
-
 # not-duplicated requires/provides/obsoletes for normal/debug packages
 %define java_rpo() %{expand:
 Requires: fontconfig%{?_isa}
@@ -1272,6 +1282,9 @@ Provides: java-%{origin}-src%{?1} = %{epoch}:%{version}-%{release}
 # Define the root name of the portable packages
 %global pkgnameroot java-%{featurever}-%{origin}-portable%{?pkgos:-%{pkgos}}
 
+# Define the architectures on which we build
+ExclusiveArch: %{aarch64} %{ppc64le} s390x x86_64
+
 Name:    java-%{javaver}-%{origin}
 Version: %{newjavaver}.%{buildver}
 Release: %{?eaprefix}%{rpmrelease}%{?extraver}%{?dist}
@@ -1407,6 +1420,8 @@ Patch1001: fips-%{featurever}u-%{fipsver}.patch
 # OpenJDK patches in need of upstreaming
 #
 #############################################
+# Revert backport of JDK-8327501 & JDK-8328366
+Patch2001: jdk8327501-8328366-revert.patch
 
 # Currently empty
 
@@ -1429,6 +1444,10 @@ BuildRequires: automake
 BuildRequires: alsa-lib-devel
 BuildRequires: binutils
 BuildRequires: cups-devel
+# From RHEL 10, debugedit is in its own package
+%if 0%{?rhel} >= 10
+BuildRequires: debugedit
+%endif
 BuildRequires: desktop-file-utils
 # elfutils only are OK for build without AOT
 BuildRequires: elfutils-devel
@@ -1491,7 +1510,7 @@ BuildRequires: zlib-devel
 # Version in src/java.desktop/share/legal/freetype.md
 Provides: bundled(freetype) = 2.13.2
 # Version in src/java.desktop/share/native/libsplashscreen/giflib/gif_lib.h
-Provides: bundled(giflib) = 5.2.1
+Provides: bundled(giflib) = 5.2.2
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
 Provides: bundled(harfbuzz) = 8.2.2
 # Version in src/java.desktop/share/native/liblcms/lcms2.h
@@ -1499,7 +1518,7 @@ Provides: bundled(lcms2) = 2.16.0
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
 Provides: bundled(libjpeg) = 6b
 # Version in src/java.desktop/share/native/libsplashscreen/libpng/png.h
-Provides: bundled(libpng) = 1.6.40
+Provides: bundled(libpng) = 1.6.43
 # Version in src/java.base/share/native/libzip/zlib/zlib.h
 Provides: bundled(zlib) = 1.3.1
 %endif
@@ -1878,6 +1897,8 @@ sh %{SOURCE12} %{top_level_dir_name}
 pushd %{top_level_dir_name}
 # Add crypto policy and FIPS support
 %patch -P1001 -p1
+# Backport reversion
+%patch -P2001 -p1
 popd # openjdk
 
 
@@ -2514,6 +2535,30 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Sun Oct 13 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.5.0.10-3
+- Sync the copy of the portable specfile with the latest update
+- ** This tarball is embargoed until 2024-10-15 @ 1pm PT. **
+- Related: RHEL-61346
+
+* Sat Oct 12 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.5.0.10-2
+- Update to jdk-21.0.5+10 (GA)
+- Update release notes to 21.0.5+10
+- Bump giflib version to 5.2.2 following JDK-8328999
+- Bump libpng version to 1.6.43 following JDK-8329004
+- Vary portablesuffix depending on whether we are on RHEL ('el8') or CentOS ('el9')
+- Handle debugedit being a separate package installed in /usr on RHEL/CentOS 10
+- Add build scripts to repository to ease remembering all CentOS & RHEL targets and options
+- Sync with RHEL 7 portable build:
+  - Use ExclusiveArch over ExcludeArch
+  - pkgos definition needs to be early enough to be used in portablesuffix
+- Make build scripts executable
+- Sync the copy of the portable specfile with the latest update
+- Revert JDK-8327501 & JDK-8328366 backport until more mature.
+- Resolves: RHEL-58798
+- Resolves: RHEL-17186
+- Resolves: RHEL-61346
+- ** This tarball is embargoed until 2024-10-15 @ 1pm PT. **
+
 * Fri Jul 12 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.4.0.7-1
 - Update to jdk-21.0.4+7 (GA)
 - Update release notes to 21.0.4+7

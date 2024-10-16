@@ -24,7 +24,8 @@
 # Enable static library builds by default.
 %bcond_without staticlibs
 # Build a fresh libjvm.so for use in a copy of the bootstrap JDK
-%bcond_without fresh_libjvm
+# Turned off until 21.0.5+1 or higher is in the buildroot
+%bcond_with fresh_libjvm
 # Build with system libraries
 %bcond_with system_libs
 
@@ -316,7 +317,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 4
+%global updatever 5
 %global patchver 0
 # buildjdkver is usually same as %%{featurever},
 # but in time of bootstrap of next jdk, it is featurever-1,
@@ -380,7 +381,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        7
+%global buildver        10
 %global rpmrelease      1
 #%%global tagsuffix     %%{nil}
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
@@ -651,6 +652,8 @@ Patch1001: fips-%{featurever}u-%{fipsver}.patch
 # OpenJDK patches in need of upstreaming
 #
 #############################################
+# Revert backport of JDK-8327501 & JDK-8328366
+Patch2001: jdk8327501-8328366-revert.patch
 
 # Currently empty
 
@@ -735,7 +738,7 @@ BuildRequires: zlib-devel
 # Version in src/java.desktop/share/legal/freetype.md
 Provides: bundled(freetype) = 2.13.2
 # Version in src/java.desktop/share/native/libsplashscreen/giflib/gif_lib.h
-Provides: bundled(giflib) = 5.2.1
+Provides: bundled(giflib) = 5.2.2
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
 Provides: bundled(harfbuzz) = 8.2.2
 # Version in src/java.desktop/share/native/liblcms/lcms2.h
@@ -743,7 +746,7 @@ Provides: bundled(lcms2) = 2.16.0
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
 Provides: bundled(libjpeg) = 6b
 # Version in src/java.desktop/share/native/libsplashscreen/libpng/png.h
-Provides: bundled(libpng) = 1.6.40
+Provides: bundled(libpng) = 1.6.43
 # Version in src/java.base/share/native/libzip/zlib/zlib.h
 Provides: bundled(zlib) = 1.3.1
 # We link statically against libstdc++ to increase portability
@@ -960,6 +963,8 @@ sh %{SOURCE12} %{top_level_dir_name}
 pushd %{top_level_dir_name}
 # Add crypto policy and FIPS support
 %patch -P1001 -p1
+# Backport reversion
+%patch -P2001 -p1
 popd # openjdk
 
 
@@ -1837,6 +1842,33 @@ done
 %endif
 
 %changelog
+* Sat Oct 12 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.5.0.10-1
+- Update to jdk-21.0.5+10 (GA)
+- Update release notes to 21.0.5+10
+- Switch to GA mode.
+- Revert JDK-8327501 & JDK-8328366 backport until more mature.
+- ** This tarball is embargoed until 2024-10-15 @ 1pm PT. **
+- Resolves: OPENJDK-3327
+- Resolves: OPENJDK-3084
+
+* Thu Oct 10 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.5.0.9-0.1.ea
+- Update to jdk-21.0.5+9 (EA)
+- Update release notes to 21.0.5+9
+
+* Wed Sep 18 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.5.0.5-0.1.ea
+- Update to jdk-21.0.5+5 (EA)
+- Update release notes to 21.0.5+5
+
+* Sun Sep 15 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.5.0.1-0.1.ea
+- Update to jdk-21.0.5+1 (EA)
+- Update release notes to 21.0.5+1
+- Switch to EA mode
+- Bump giflib version to 5.2.2 following JDK-8328999
+- Bump libpng version to 1.6.43 following JDK-8329004
+- Turn off fresh_libjvm following JDK-8329088 which changes jdk.internal.vm.StackChunk in CDS archive
+- Add build scripts to repository to ease remembering all CentOS & RHEL targets and options
+- Make build scripts executable
+
 * Fri Jul 12 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.4.0.7-1
 - Update to jdk-21.0.4+7 (GA)
 - Update release notes to 21.0.4+7
