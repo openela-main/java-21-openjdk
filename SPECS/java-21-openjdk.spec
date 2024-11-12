@@ -365,8 +365,8 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        10
-%global rpmrelease      3
+%global buildver        11
+%global rpmrelease      2
 # Settings used by the portable build
 %global portablerelease 1
 # Portable suffix differs between RHEL and CentOS
@@ -1420,8 +1420,6 @@ Patch1001: fips-%{featurever}u-%{fipsver}.patch
 # OpenJDK patches in need of upstreaming
 #
 #############################################
-# Revert backport of JDK-8327501 & JDK-8328366
-Patch2001: jdk8327501-8328366-revert.patch
 
 # Currently empty
 
@@ -1897,8 +1895,6 @@ sh %{SOURCE12} %{top_level_dir_name}
 pushd %{top_level_dir_name}
 # Add crypto policy and FIPS support
 %patch -P1001 -p1
-# Backport reversion
-%patch -P2001 -p1
 popd # openjdk
 
 
@@ -2536,6 +2532,13 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Wed Oct 16 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.5.0.11-2
+- Update to jdk-21.0.5+11 (GA)
+- Update release notes to 21.0.5+11
+- Remove local JDK-8327501 & JDK-8328366 backport as this is now upstream.
+- Sync the copy of the portable specfile with the latest update
+- Related: RHEL-61344
+
 * Sun Oct 13 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.5.0.10-3
 - Sync the copy of the portable specfile with the latest update
 - ** This tarball is embargoed until 2024-10-15 @ 1pm PT. **

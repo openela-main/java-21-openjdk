@@ -381,7 +381,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        10
+%global buildver        11
 %global rpmrelease      1
 #%%global tagsuffix     %%{nil}
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
@@ -652,8 +652,6 @@ Patch1001: fips-%{featurever}u-%{fipsver}.patch
 # OpenJDK patches in need of upstreaming
 #
 #############################################
-# Revert backport of JDK-8327501 & JDK-8328366
-Patch2001: jdk8327501-8328366-revert.patch
 
 # Currently empty
 
@@ -963,8 +961,6 @@ sh %{SOURCE12} %{top_level_dir_name}
 pushd %{top_level_dir_name}
 # Add crypto policy and FIPS support
 %patch -P1001 -p1
-# Backport reversion
-%patch -P2001 -p1
 popd # openjdk
 
 
@@ -1842,6 +1838,11 @@ done
 %endif
 
 %changelog
+* Wed Oct 16 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.5.0.11-1
+- Update to jdk-21.0.5+11 (GA)
+- Update release notes to 21.0.5+11
+- Remove local JDK-8327501 & JDK-8328366 backport as this is now upstream.
+
 * Sat Oct 12 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.5.0.10-1
 - Update to jdk-21.0.5+10 (GA)
 - Update release notes to 21.0.5+10

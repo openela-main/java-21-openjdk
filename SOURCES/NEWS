@@ -376,6 +376,7 @@ Live versions of these release notes can be found at:
   - JDK-8341057: Add 2 SSL.com TLS roots
   - JDK-8341059: Change Entrust TLS distrust date to November 12, 2024
   - JDK-8341674: [21u] Remove designator DEFAULT_PROMOTED_VERSION_PRE=ea for release 21.0.5
+  - JDK-8341989: [21u] Back out JDK-8327501 and JDK-8328366
 
 Notes on individual issues:
 ===========================
