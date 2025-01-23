@@ -308,7 +308,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 5
+%global updatever 6
 %global patchver 0
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
 # We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
@@ -356,7 +356,7 @@
 # Define the OS the portable JDK is built on
 # This is undefined for CentOS & openjdk-portable-rhel-8 builds and
 # equals 'rhel7' for openjdk-portable-rhel-7 builds
-%if 0%{?centos} == 0
+%if 0
 %global pkgos rhel7
 %endif
 
@@ -365,8 +365,8 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        11
-%global rpmrelease      2
+%global buildver        7
+%global rpmrelease      1
 # Settings used by the portable build
 %global portablerelease 1
 # Portable suffix differs between RHEL and CentOS
@@ -833,6 +833,8 @@ exit 0
 %doc %{_defaultdocdir}/%{uniquejavadocdir -- %{?1}}/NEWS
 %doc %{_defaultdocdir}/%{uniquejavadocdir -- %{?1}}/README.md
 %doc %{_defaultdocdir}/%{uniquejavadocdir -- %{?1}}/java-%{featurever}-openjdk-portable.specfile
+%doc %{_defaultdocdir}/%{uniquejavadocdir -- %{?1}}/openjdk-devkit.specfile
+%doc %{_defaultdocdir}/%{uniquejavadocdir -- %{?1}}/0*.patch
 %dir %{_sysconfdir}/.java/.systemPrefs
 %dir %{_sysconfdir}/.java
 %dir %{_jvmdir}/%{sdkdir -- %{?1}}
@@ -1360,6 +1362,25 @@ Source18: TestTranslations.java
 Source19: README.md
 Source20: java-%{featurever}-openjdk-portable.specfile
 Source21: NEWS
+Source22: openjdk-devkit.specfile
+# Devkit patches; see https://github.com/rh-openjdk/jdk/tree/devkit
+# To regenerate, use git format-patch -N jdk21u/master
+# Add RHEL RPM URLs and turn off robots
+Source23: 0001-Allow-devkit-to-work-with-RHEL.patch
+# Turn off multilib on x86_64
+Source24: 0002-Disable-multilib-on-x86_64.patch
+# Improve build logging (OPENJDK-3071)
+Source25: 0003-Log-devkit-build-to-stdout.patch
+# Remove .comment sections from sysroot objects
+Source26: 0004-devkit-Remove-.comment-sections-from-sysroot-objects.patch
+# Configure binutils with --enable-deterministic-archives
+Source27: 0005-Tools.gmk-Configure-binutils-with-enable-determinist.patch
+# Configure gcc with --enable-linker-build-id (OPENJDK-3068)
+Source28: 0006-Tools.gmk-Add-enable-linker-build-id-to-gcc-build.patch
+# Exclude systemtap-sdt-devel on s390x & ppc64* (OPENJDK-3070)
+Source29: 0007-Tools.gmk-Exclude-systemtap-sdt-devel-on-s390x-ppc64.patch
+# Use update repository on RHEL rather than GA (OPENJDK-3589)
+Source30: 0008-Tools.gmk-Use-update-repository-on-RHEL-rather-than-.patch
 
 # Setup variables to reference correct sources
 %global releasezip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.unstripped.jdk.%{_arch}.tar.xz
@@ -1831,6 +1852,7 @@ The %{origin_nice} %{featurever} API documentation compressed in a single archiv
 %prep
 
 echo "Preparing %{oj_vendor_version}"
+echo "System is RHEL=%{?rhel}%{!?rhel:0}, CentOS=%{?centos}%{!?centos:0}, EPEL=%{?epel}%{!?epel:0}, Fedora=%{?fedora}%{!?fedora:0}"
 
 # Using the echo macro breaks rpmdev-bumpspec, as it parses the first line of stdout :-(
 %if 0%{?stapinstall:1}
@@ -2098,9 +2120,12 @@ if ! nm ${alt_java_binary} | grep prctl ; then true ; else false; fi
 
 %if %{include_staticlibs}
 # Check debug symbols in static libraries (smoke test)
+# Temporary workaround for debuginfo failure on x86_64 with devkit build
+%ifnarch x86_64
 export STATIC_LIBS_HOME=${JAVA_HOME}/lib/static/linux-%{archinstall}/glibc
 readelf --debug-dump $STATIC_LIBS_HOME/libnet.a | grep Inet4AddressImpl.c
 readelf --debug-dump $STATIC_LIBS_HOME/libnet.a | grep Inet6AddressImpl.c
+%endif
 %endif
 
 so_suffix="so"
@@ -2187,7 +2212,11 @@ miscdir=$(pwd)/%{installoutputdir -- "-misc"}
 commondocdir=${RPM_BUILD_ROOT}%{_defaultdocdir}/%{uniquejavadocdir -- $suffix}
 install -d -m 755 ${commondocdir}
 mv ${jdk_image}/NEWS ${commondocdir}
-cp -a %{SOURCE19} %{SOURCE20} ${commondocdir}
+# Copy portable and devkit specfiles and README.md
+cp -a %{SOURCE19} %{SOURCE20} %{SOURCE22} ${commondocdir}
+# Copy devkit patches
+cp -a  %{SOURCE23} %{SOURCE24} %{SOURCE25} %{SOURCE26} \
+       %{SOURCE27} %{SOURCE28} %{SOURCE29} %{SOURCE30} ${commondocdir}
 
 # Install the jdk
 mkdir -p $RPM_BUILD_ROOT%{_jvmdir}
@@ -2532,6 +2561,23 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Sat Jan 18 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.6.0.7-1
+- Update to jdk-21.0.6+7 (GA)
+- Update release notes to 21.0.6+7
+- Sync the copy of the portable & devkit specfiles with the latest update
+- Include the latest devkit patches
+- Update README.md to list an easier way of disabling the devkit
+- ** This tarball is embargoed until 2025-01-21 @ 1pm PT. **
+- Resolves: RHEL-73562
+
+* Fri Jan 17 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.5.0.11-3
+- Transition to the devkit build by not defining pkgos
+- Exempt x86_64 from the static libs debuginfo test until portable uses an older DWARF version
+- Sync the copy of the portable specfile with the devkit version
+- Include the devkit specfile and patches
+- Document the devkit in README.md
+- Resolves: RHEL-74403
+
 * Wed Oct 16 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.5.0.11-2
 - Update to jdk-21.0.5+11 (GA)
 - Update release notes to 21.0.5+11
