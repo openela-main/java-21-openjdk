@@ -308,7 +308,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 6
+%global updatever 7
 %global patchver 0
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
 # We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
@@ -344,7 +344,7 @@
 # Define IcedTea version used for SystemTap tapsets and desktop file
 %global icedteaver      6.0.0pre00-c848b93a8598
 # Define current Git revision for the FIPS support patches
-%global fipsver 0a42e29b391
+%global fipsver 9203d50836c
 # Define JDK versions
 %global newjavaver %{featurever}.%{interimver}.%{updatever}.%{patchver}
 %global javaver         %{featurever}
@@ -365,7 +365,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        7
+%global buildver        6
 %global rpmrelease      1
 # Settings used by the portable build
 %global portablerelease 1
@@ -1159,8 +1159,8 @@ Requires: ca-certificates
 # Require javapackages-filesystem for ownership of /usr/lib/jvm/ and macros
 Requires: javapackages-filesystem
 # Require zone-info data provided by tzdata-java sub-package
-# 2024a required as of JDK-8325150
-Requires: tzdata-java >= 2024a
+# 2025a required as of JDK-8347965
+Requires: tzdata-java >= 2025a
 # for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
@@ -1507,8 +1507,8 @@ BuildRequires: %{pkgnameroot}-misc = %{epoch}:%{version}-%{prelease}.%{portables
 %ifarch %{zero_arches}
 BuildRequires: libffi-devel
 %endif
-# 2024a required as of JDK-8325150
-BuildRequires: tzdata-java >= 2024a
+# 2025a required as of JDK-8347965
+BuildRequires: tzdata-java >= 2025a
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -2560,6 +2560,16 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Fri Apr 11 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.7.0.6-1
+- Update to jdk-21.0.7+6 (GA)
+- Update release notes to 21.0.7+6
+- Rebase FIPS support against 21.0.7+5
+- Require tzdata 2025a due to upstream inclusion of JDK-8347965
+- Sync the copy of the portable specfile with the latest update
+- ** This tarball is embargoed until 2025-04-15 @ 1pm PT. **
+- Resolves: RHEL-86981
+- Resolves: RHEL-86632
+
 * Sat Jan 18 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.6.0.7-1
 - Update to jdk-21.0.6+7 (GA)
 - Update release notes to 21.0.6+7
