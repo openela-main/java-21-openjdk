@@ -1979,7 +1979,7 @@ index 539ef1e8ee8..435f57e3ff2 100644
                  "sun.security.rsa.PSSParameters", null);
      }
 diff --git a/src/java.base/share/conf/security/java.security b/src/java.base/share/conf/security/java.security
-index 5149edba0e5..8227d650a03 100644
+index f8b01a4ea1e..b325bf7e9fc 100644
 --- a/src/java.base/share/conf/security/java.security
 +++ b/src/java.base/share/conf/security/java.security
 @@ -85,6 +85,17 @@ security.provider.tbd=Apple
@@ -2959,7 +2959,7 @@ index 00000000000..f8d505ca815
 +}
 \ No newline at end of file
 diff --git a/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/P11Key.java b/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/P11Key.java
-index c3b412885a6..0e7ce73b158 100644
+index 01fc06ae283..e3ca000d309 100644
 --- a/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/P11Key.java
 +++ b/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/P11Key.java
 @@ -37,6 +37,8 @@ import javax.crypto.*;
@@ -2981,7 +2981,7 @@ index c3b412885a6..0e7ce73b158 100644
      private static final String PUBLIC = "public";
      private static final String PRIVATE = "private";
      private static final String SECRET = "secret";
-@@ -401,9 +406,10 @@ abstract class P11Key implements Key, Length {
+@@ -414,9 +419,10 @@ abstract class P11Key implements Key, Length {
                      new CK_ATTRIBUTE(CKA_EXTRACTABLE),
          });
  
@@ -2995,7 +2995,7 @@ index c3b412885a6..0e7ce73b158 100644
  
          return switch (algorithm) {
              case "RSA" -> P11RSAPrivateKeyInternal.of(session, keyID, algorithm,
-@@ -455,7 +461,8 @@ abstract class P11Key implements Key, Length {
+@@ -468,7 +474,8 @@ abstract class P11Key implements Key, Length {
  
          public String getFormat() {
              token.ensureValid();
@@ -3005,13 +3005,13 @@ index c3b412885a6..0e7ce73b158 100644
                  return null;
              } else {
                  return "RAW";
-@@ -1625,4 +1632,3 @@ final class SessionKeyRef extends PhantomReference<P11Key> {
+@@ -1638,4 +1645,3 @@ final class SessionKeyRef extends PhantomReference<P11Key> {
          this.clear();
      }
  }
 -
 diff --git a/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/SunPKCS11.java b/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/SunPKCS11.java
-index 5cd6828d293..bae49c4e8a9 100644
+index 0a62021633f..0723b69c2bc 100644
 --- a/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/SunPKCS11.java
 +++ b/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/SunPKCS11.java
 @@ -26,6 +26,9 @@
@@ -3022,7 +3022,7 @@ index 5cd6828d293..bae49c4e8a9 100644
 +import java.lang.invoke.MethodHandles;
 +import java.lang.invoke.MethodType;
  import java.util.*;
- 
+ import java.util.stream.Collectors;
  import java.security.*;
 @@ -42,10 +45,12 @@ import javax.security.auth.callback.PasswordCallback;
  
@@ -3141,7 +3141,7 @@ index 5cd6828d293..bae49c4e8a9 100644
              }
              p11 = tmpPKCS11;
  
-@@ -1389,11 +1461,52 @@ public final class SunPKCS11 extends AuthProvider {
+@@ -1388,11 +1460,52 @@ public final class SunPKCS11 extends AuthProvider {
          }
  
          @Override
@@ -3194,7 +3194,7 @@ index 5cd6828d293..bae49c4e8a9 100644
              try {
                  return newInstance0(param);
              } catch (PKCS11Exception e) {
-@@ -1750,6 +1863,9 @@ public final class SunPKCS11 extends AuthProvider {
+@@ -1749,6 +1862,9 @@ public final class SunPKCS11 extends AuthProvider {
          try {
              session = token.getOpSession();
              p11.C_Logout(session.id());
@@ -3252,7 +3252,7 @@ index a6f5f0a8764..9a07c96ca4e 100644
      }
  
 diff --git a/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/wrapper/PKCS11.java b/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/wrapper/PKCS11.java
-index 4b06daaf264..55e14945469 100644
+index 0fd13fd6fa6..3c959c942a1 100644
 --- a/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/wrapper/PKCS11.java
 +++ b/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/wrapper/PKCS11.java
 @@ -49,6 +49,9 @@ package sun.security.pkcs11.wrapper;
@@ -3312,7 +3312,7 @@ index 4b06daaf264..55e14945469 100644
              }
              if (omitInitialize == false) {
                  try {
-@@ -1976,4 +2004,194 @@ static class SynchronizedPKCS11 extends PKCS11 {
+@@ -2012,4 +2040,194 @@ static class SynchronizedPKCS11 extends PKCS11 {
          super.C_GenerateRandom(hSession, randomData);
      }
  }
