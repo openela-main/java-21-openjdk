@@ -366,9 +366,9 @@
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        6
-%global rpmrelease      1
+%global rpmrelease      2
 # Settings used by the portable build
-%global portablerelease 1
+%global portablerelease 2
 # Portable suffix differs between RHEL and CentOS
 %if 0%{?centos} == 0
 %global portablesuffix %{?pkgos:el7_9}%{!?pkgos:el8}
@@ -1450,6 +1450,10 @@ Patch1001: fips-%{featurever}u-%{fipsver}.patch
 #
 #############################################
 
+# JDK-8351500: G1: NUMA migrations cause crashes in region allocation
+# Upstream in 21.0.8+1
+Patch2001: jdk8351500-numa_migration_crashes.patch
+
 #############################################
 #
 # Portable build specific patches
@@ -1917,6 +1921,8 @@ sh %{SOURCE12} %{top_level_dir_name}
 pushd %{top_level_dir_name}
 # Add crypto policy and FIPS support
 %patch -P1001 -p1
+# Add early JDK-8351500
+%patch -P2001 -p1
 popd # openjdk
 
 
@@ -2560,6 +2566,11 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Thu May 08 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.7.0.6-2
+- Add local version of JDK-8351500 for early interim release before 21.0.8
+- Sync the copy of the portable specfile with the latest update
+- Resolves: RHEL-90306
+
 * Fri Apr 11 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.7.0.6-1
 - Update to jdk-21.0.7+6 (GA)
 - Update release notes to 21.0.7+6
