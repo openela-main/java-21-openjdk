@@ -308,7 +308,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 7
+%global updatever 8
 %global patchver 0
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
 # We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
@@ -365,7 +365,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        6
+%global buildver        9
 %global rpmrelease      1
 # Settings used by the portable build
 %global portablerelease 1
@@ -1138,6 +1138,10 @@ OrderWithRequires: %{name}-headless%{?1}%{?_isa} = %{epoch}:%{version}-%{release
 %if 0%{?rhel} >= 8 || 0%{?fedora} > 0
 Recommends: gtk3%{?_isa}
 %endif
+# Recommend PipeWire for screenshots under Wayland.
+%if 0%{?rhel} >= 9 || 0%{?fedora} > 0
+Recommends: pipewire%{?_isa}
+%endif
 
 Provides: java-%{javaver}-%{origin}%{?1} = %{epoch}:%{version}-%{release}
 
@@ -1450,6 +1454,8 @@ Patch1001: fips-%{featurever}u-%{fipsver}.patch
 #
 #############################################
 
+# Currently empty
+
 #############################################
 #
 # Portable build specific patches
@@ -1527,17 +1533,17 @@ BuildRequires: libpng-devel
 BuildRequires: zlib-devel
 %else
 # Version in src/java.desktop/share/legal/freetype.md
-Provides: bundled(freetype) = 2.13.2
+Provides: bundled(freetype) = 2.13.3
 # Version in src/java.desktop/share/native/libsplashscreen/giflib/gif_lib.h
 Provides: bundled(giflib) = 5.2.2
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
-Provides: bundled(harfbuzz) = 8.2.2
+Provides: bundled(harfbuzz) = 10.4.0
 # Version in src/java.desktop/share/native/liblcms/lcms2.h
-Provides: bundled(lcms2) = 2.16.0
+Provides: bundled(lcms2) = 2.17.0
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
 Provides: bundled(libjpeg) = 6b
 # Version in src/java.desktop/share/native/libsplashscreen/libpng/png.h
-Provides: bundled(libpng) = 1.6.43
+Provides: bundled(libpng) = 1.6.47
 # Version in src/java.base/share/native/libzip/zlib/zlib.h
 Provides: bundled(zlib) = 1.3.1
 %endif
@@ -2561,6 +2567,72 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Thu Jul 10 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.8.0.9-1.1
+- Update to jdk-21.0.8+9 (GA)
+- Update release notes to 21.0.8+9
+- Switch to GA mode
+- Sync the copy of the portable specfile with the latest update
+- ** This tarball is embargoed until 2025-07-15 @ 1pm PT. **
+- Resolves: RHEL-102289
+
+* Thu Jul 10 2025 Thomas Fitzsimmons <fitzsim@redhat.com> - 1:21.0.7.0.6-3
+- Recommend PipeWire on RHEL 9 and later for java.awt.Robot screenshots under Wayland
+- Resolves: RHEL-102677
+
+* Thu Jul 10 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.8.0.8-0.1.ea
+- Update to jdk-21.0.8+8 (EA)
+- Update release notes to 21.0.8+8
+- Sync the copy of the portable specfile with the latest update
+- Resolves: RHEL-101798
+
+* Wed Jul 09 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.8.0.2-0.1.ea
+- Update to jdk-21.0.8+2 (EA)
+- Update release notes to 21.0.8+2
+- Sync the copy of the portable specfile with the latest update
+- Add timezone data update check to openjdk_news.sh
+- Add duplicate check to openjdk_news.sh
+- Exit if no fixes are obtained rather than try to run filters in openjdk_news.sh
+- Related: RHEL-101798
+- Resolves: RHEL-103209
+
+* Wed Jul 09 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.8.0.1-0.1.ea
+- Update get_bundle_versions.sh to match other scripts
+- * get_bundle_versions.sh: Add license
+- * get_bundle_versions.sh: Set compile-command in Emacs
+- * get_bundle_versions.sh: Use different error codes for different failures
+- * get_bundle_versions.sh: Remove unneeded '.' in JPEG version
+- * get_bundle_versions.sh: shellcheck: Double-quote variable references (SC2086)
+- * get_bundle_versions.sh: shellcheck: Drop use of cat and pass file to awk directly (SC2002)
+- Add OpenJDK 8u support to get_bundle_versions.sh
+- Print bundle updates and backouts at end of openjdk_news.sh output
+- Refer user to get_bundle_versions.sh when bundle updates are found by openjdk_news.sh
+- Related: RHEL-103209
+
+* Wed Jul 09 2025 Antonio Vieiro <avieirov@redhat.com> - 1:21.0.8.0.1-0.1.ea
+- Add script to obtain bundled library versions from OpenJDK sources
+- Related: RHEL-103209
+
+* Wed Jul 09 2025 Thomas Fitzsimmons <fitzsim@redhat.com> - 1:21.0.8.0.1-0.1.ea
+- Warn about bundled provide version bumps and backouts in openjdk_news.sh
+- Related: RHEL-103209
+
+* Wed Jul 09 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.8.0.1-0.1.ea
+- Update to jdk-21.0.8+1 (EA)
+- Update release notes to 21.0.8+1
+- Bump freetype version to 2.13.3 following JDK-8348596
+- Bump harfbuzz version to 10.4.0 following JDK-8348597
+- Bump lcms2 version to 2.17.0 following JDK-8348110
+- Bump libpng version to 1.6.47 following JDK-8348598
+- Switch to EA mode
+- Drop JDK-8351500 local patch which is now available in 21.0.8+1 upstream
+- Sync the copy of the portable specfile with the latest update
+- Related: RHEL-101798
+
+* Thu May 08 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.7.0.6-2
+- Add local version of JDK-8351500 for early interim release before 21.0.8
+- Sync the copy of the portable specfile with the latest update
+- Resolves: RHEL-90309
+
 * Fri Apr 11 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.7.0.6-1
 - Update to jdk-21.0.7+6 (GA)
 - Update release notes to 21.0.7+6
@@ -2569,7 +2641,7 @@ cjc.mainProgram(args)
 - Sync the copy of the portable specfile with the latest update
 - ** This tarball is embargoed until 2025-04-15 @ 1pm PT. **
 - Resolves: RHEL-86984
-- Resolves: RHEL-86621
+- Resolves: RHEL-86635
 
 * Thu Feb 06 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.6.0.7-2
 - Bump tzdata requirement to 2024b for JDK-8339637
