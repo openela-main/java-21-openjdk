@@ -308,7 +308,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 7
+%global updatever 8
 %global patchver 0
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
 # We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
@@ -365,10 +365,10 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        6
-%global rpmrelease      2
+%global buildver        9
+%global rpmrelease      1
 # Settings used by the portable build
-%global portablerelease 2
+%global portablerelease 1
 # Portable suffix differs between RHEL and CentOS
 %if 0%{?centos} == 0
 %global portablesuffix %{?pkgos:el7_9}%{!?pkgos:el8}
@@ -1450,9 +1450,7 @@ Patch1001: fips-%{featurever}u-%{fipsver}.patch
 #
 #############################################
 
-# JDK-8351500: G1: NUMA migrations cause crashes in region allocation
-# Upstream in 21.0.8+1
-Patch2001: jdk8351500-numa_migration_crashes.patch
+# Currently empty
 
 #############################################
 #
@@ -1531,17 +1529,17 @@ BuildRequires: libpng-devel
 BuildRequires: zlib-devel
 %else
 # Version in src/java.desktop/share/legal/freetype.md
-Provides: bundled(freetype) = 2.13.2
+Provides: bundled(freetype) = 2.13.3
 # Version in src/java.desktop/share/native/libsplashscreen/giflib/gif_lib.h
 Provides: bundled(giflib) = 5.2.2
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
-Provides: bundled(harfbuzz) = 8.2.2
+Provides: bundled(harfbuzz) = 10.4.0
 # Version in src/java.desktop/share/native/liblcms/lcms2.h
-Provides: bundled(lcms2) = 2.16.0
+Provides: bundled(lcms2) = 2.17.0
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
 Provides: bundled(libjpeg) = 6b
 # Version in src/java.desktop/share/native/libsplashscreen/libpng/png.h
-Provides: bundled(libpng) = 1.6.43
+Provides: bundled(libpng) = 1.6.47
 # Version in src/java.base/share/native/libzip/zlib/zlib.h
 Provides: bundled(zlib) = 1.3.1
 %endif
@@ -1921,8 +1919,6 @@ sh %{SOURCE12} %{top_level_dir_name}
 pushd %{top_level_dir_name}
 # Add crypto policy and FIPS support
 %patch -P1001 -p1
-# Add early JDK-8351500
-%patch -P2001 -p1
 popd # openjdk
 
 
@@ -2566,6 +2562,63 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Thu Jul 10 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.8.0.9-1.1
+- Update to jdk-21.0.8+9 (GA)
+- Update release notes to 21.0.8+9
+- Switch to GA mode
+- Sync the copy of the portable specfile with the latest update
+- ** This tarball is embargoed until 2025-07-15 @ 1pm PT. **
+- Resolves: RHEL-102278
+
+* Thu Jul 10 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.8.0.8-0.1.ea
+- Update to jdk-21.0.8+8 (EA)
+- Update release notes to 21.0.8+8
+- Sync the copy of the portable specfile with the latest update
+- Resolves: RHEL-101799
+
+* Wed Jul 09 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.8.0.2-0.1.ea
+- Update to jdk-21.0.8+2 (EA)
+- Update release notes to 21.0.8+2
+- Sync the copy of the portable specfile with the latest update
+- Add timezone data update check to openjdk_news.sh
+- Add duplicate check to openjdk_news.sh
+- Exit if no fixes are obtained rather than try to run filters in openjdk_news.sh
+- Related: RHEL-101799
+- Resolves: RHEL-103210
+
+* Wed Jul 09 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.8.0.1-0.1.ea
+- Update get_bundle_versions.sh to match other scripts
+- * get_bundle_versions.sh: Add license
+- * get_bundle_versions.sh: Set compile-command in Emacs
+- * get_bundle_versions.sh: Use different error codes for different failures
+- * get_bundle_versions.sh: Remove unneeded '.' in JPEG version
+- * get_bundle_versions.sh: shellcheck: Double-quote variable references (SC2086)
+- * get_bundle_versions.sh: shellcheck: Drop use of cat and pass file to awk directly (SC2002)
+- Add OpenJDK 8u support to get_bundle_versions.sh
+- Print bundle updates and backouts at end of openjdk_news.sh output
+- Refer user to get_bundle_versions.sh when bundle updates are found by openjdk_news.sh
+- Related: RHEL-103210
+
+* Wed Jul 09 2025 Antonio Vieiro <avieirov@redhat.com> - 1:21.0.8.0.1-0.1.ea
+- Add script to obtain bundled library versions from OpenJDK sources
+- Related: RHEL-103210
+
+* Wed Jul 09 2025 Thomas Fitzsimmons <fitzsim@redhat.com> - 1:21.0.8.0.1-0.1.ea
+- Warn about bundled provide version bumps and backouts in openjdk_news.sh
+- Related: RHEL-103210
+
+* Wed Jul 09 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.8.0.1-0.1.ea
+- Update to jdk-21.0.8+1 (EA)
+- Update release notes to 21.0.8+1
+- Bump freetype version to 2.13.3 following JDK-8348596
+- Bump harfbuzz version to 10.4.0 following JDK-8348597
+- Bump lcms2 version to 2.17.0 following JDK-8348110
+- Bump libpng version to 1.6.47 following JDK-8348598
+- Switch to EA mode
+- Drop JDK-8351500 local patch which is now available in 21.0.8+1 upstream
+- Sync the copy of the portable specfile with the latest update
+- Related: RHEL-101799
+
 * Thu May 08 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.7.0.6-2
 - Add local version of JDK-8351500 for early interim release before 21.0.8
 - Sync the copy of the portable specfile with the latest update
