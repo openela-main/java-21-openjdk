@@ -308,7 +308,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 8
+%global updatever 9
 %global patchver 0
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
 # We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
@@ -365,7 +365,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        9
+%global buildver        10
 %global rpmrelease      1
 # Settings used by the portable build
 %global portablerelease 1
@@ -1532,12 +1532,12 @@ BuildRequires: libjpeg-devel
 BuildRequires: libpng-devel
 BuildRequires: zlib-devel
 %else
-# Version in src/java.desktop/share/legal/freetype.md
+# Version in src/java.desktop/share/native/libfreetype/include/freetype/freetype.h
 Provides: bundled(freetype) = 2.13.3
 # Version in src/java.desktop/share/native/libsplashscreen/giflib/gif_lib.h
 Provides: bundled(giflib) = 5.2.2
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
-Provides: bundled(harfbuzz) = 10.4.0
+Provides: bundled(harfbuzz) = 11.2.0
 # Version in src/java.desktop/share/native/liblcms/lcms2.h
 Provides: bundled(lcms2) = 2.17.0
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
@@ -2567,7 +2567,19 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
-* Thu Jul 10 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.8.0.9-1.1
+* Fri Oct 17 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.9.0.10-1
+- Update to jdk-21.0.9+10 (GA)
+- Update release notes to 21.0.9+10
+- Bump harfbuzz version to 11.2.0 following JDK-8355528
+- Add NEWS corrections from Thomas
+- Use double spacing consistently in notes for this release
+- Correct 11u release reference to corresponding 21u release as pointed out by Kieran
+- Sync the copy of the portable specfile with the latest update
+- ** This tarball is embargoed until 2025-10-21 @ 1pm PT. **
+- Resolves: RHEL-118774
+- Resolves: RHEL-119466
+
+* Thu Jul 10 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.8.0.9-1
 - Update to jdk-21.0.8+9 (GA)
 - Update release notes to 21.0.8+9
 - Switch to GA mode
