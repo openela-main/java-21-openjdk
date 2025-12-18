@@ -370,7 +370,7 @@
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        10
-%global rpmrelease      1
+%global rpmrelease      2
 # Settings used by the portable build
 %global portablerelease 1
 # Portable suffix differs between RHEL and CentOS
@@ -2471,6 +2471,12 @@ exit 0
 %endif
 
 %changelog
+* Sat Oct 18 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.9.0.10-2
+- Bump rpmrelease for CentOS build
+- Add scripts to handle tagging of portable-based RPMs
+- Related: RHEL-118771
+- Related: RHEL-119468
+
 * Fri Oct 17 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.9.0.10-1
 - Update to jdk-21.0.9+10 (GA)
 - Update release notes to 21.0.9+10
