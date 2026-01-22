@@ -136,10 +136,10 @@ index 51d4f724c33..feb0bcf3e75 100644
    BASIC_JDKLIB_LIBS=""
    BASIC_JDKLIB_LIBS_TARGET=""
 diff --git a/make/autoconf/spec.gmk.in b/make/autoconf/spec.gmk.in
-index f6def153c82..4d7abc33427 100644
+index 7f085676ca9..2476b9ae964 100644
 --- a/make/autoconf/spec.gmk.in
 +++ b/make/autoconf/spec.gmk.in
-@@ -873,6 +873,11 @@ INSTALL_SYSCONFDIR=@sysconfdir@
+@@ -822,6 +822,11 @@ PANDOC_MARKDOWN_FLAG:=@PANDOC_MARKDOWN_FLAG@
  # Libraries
  #
  
@@ -1979,7 +1979,7 @@ index 539ef1e8ee8..435f57e3ff2 100644
                  "sun.security.rsa.PSSParameters", null);
      }
 diff --git a/src/java.base/share/conf/security/java.security b/src/java.base/share/conf/security/java.security
-index f8b01a4ea1e..b325bf7e9fc 100644
+index 6b0fd201b9b..2af4e3a3e21 100644
 --- a/src/java.base/share/conf/security/java.security
 +++ b/src/java.base/share/conf/security/java.security
 @@ -85,6 +85,17 @@ security.provider.tbd=Apple
@@ -2064,7 +2064,7 @@ index f8b01a4ea1e..b325bf7e9fc 100644
  # the javax.net.ssl package.
 diff --git a/src/java.base/share/conf/security/nss.fips.cfg.in b/src/java.base/share/conf/security/nss.fips.cfg.in
 new file mode 100644
-index 00000000000..55bbba98b7a
+index 00000000000..6de716e6b42
 --- /dev/null
 +++ b/src/java.base/share/conf/security/nss.fips.cfg.in
 @@ -0,0 +1,8 @@
@@ -2074,7 +2074,7 @@ index 00000000000..55bbba98b7a
 +nssDbMode = readWrite
 +nssModule = fips
 +
-+attributes(*,CKO_SECRET_KEY,CKK_GENERIC_SECRET)={ CKA_SIGN=true }
++attributes(*,CKO_SECRET_KEY,*)={ CKA_SIGN=true CKA_ENCRYPT=true }
 +
 diff --git a/src/java.base/share/lib/security/default.policy b/src/java.base/share/lib/security/default.policy
 index 86d45147709..22fd8675503 100644
@@ -2959,7 +2959,7 @@ index 00000000000..f8d505ca815
 +}
 \ No newline at end of file
 diff --git a/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/P11Key.java b/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/P11Key.java
-index 01fc06ae283..e3ca000d309 100644
+index f8dd5a71c2c..6423805d164 100644
 --- a/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/P11Key.java
 +++ b/src/jdk.crypto.cryptoki/share/classes/sun/security/pkcs11/P11Key.java
 @@ -37,6 +37,8 @@ import javax.crypto.*;
@@ -3005,7 +3005,7 @@ index 01fc06ae283..e3ca000d309 100644
                  return null;
              } else {
                  return "RAW";
-@@ -1638,4 +1645,3 @@ final class SessionKeyRef extends PhantomReference<P11Key> {
+@@ -1664,4 +1671,3 @@ final class SessionKeyRef extends PhantomReference<P11Key> {
          this.clear();
      }
  }
