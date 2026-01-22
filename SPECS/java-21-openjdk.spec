@@ -308,7 +308,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 9
+%global updatever 10
 %global patchver 0
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
 # We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
@@ -344,7 +344,7 @@
 # Define IcedTea version used for SystemTap tapsets and desktop file
 %global icedteaver      6.0.0pre00-c848b93a8598
 # Define current Git revision for the FIPS support patches
-%global fipsver 9203d50836c
+%global fipsver a0fd6e8ed6e
 # Define JDK versions
 %global newjavaver %{featurever}.%{interimver}.%{updatever}.%{patchver}
 %global javaver         %{featurever}
@@ -365,8 +365,8 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        10
-%global rpmrelease      2
+%global buildver        7
+%global rpmrelease      1
 # Settings used by the portable build
 %global portablerelease 1
 # Portable suffix differs between RHEL and CentOS
@@ -1438,6 +1438,7 @@ Source30: 0008-Tools.gmk-Use-update-repository-on-RHEL-rather-than-.patch
 # test/jdk/sun/security/pkcs11/fips/VerifyMissingAttributes.java: fixed jtreg main class
 # RH1940064: Enable XML Signature provider in FIPS mode
 # RH2173781: Avoid calling C_GetInfo() too early, before cryptoki is initialized [now part of JDK-8301553 upstream]
+# OPENJDK-4013: Update nss.fips.cfg to grant CKA_SIGN and CKA_ENCRYPT to any CKO_SECRET_KEY
 Patch1001: fips-%{featurever}u-%{fipsver}.patch
 
 #############################################
@@ -1543,7 +1544,7 @@ Provides: bundled(lcms2) = 2.17.0
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
 Provides: bundled(libjpeg) = 6b
 # Version in src/java.desktop/share/native/libsplashscreen/libpng/png.h
-Provides: bundled(libpng) = 1.6.47
+Provides: bundled(libpng) = 1.6.51
 # Version in src/java.base/share/native/libzip/zlib/zlib.h
 Provides: bundled(zlib) = 1.3.1
 %endif
@@ -2567,6 +2568,21 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Sun Jan 18 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.10.0.7-1
+- Update to jdk-21.0.10+7 (GA)
+- Update release notes to 21.0.10+7
+- Bump libpng version to 1.6.51 following JDK-8372534
+- Update FIPS patch to include nss.fips.cfg that grants CKA_ENCRYPT
+- Handle 'upgrade' as an alternative to 'update' in openjdk_news.sh
+- Sync the copy of the portable specfile with the latest update
+- Resolves: RHEL-142859
+- Resolves: RHEL-139560
+- Resolves: RHEL-131592
+- Resolves: RHEL-131602
+- Resolves: RHEL-122121
+- Resolves: RHEL-142820
+- ** This tarball is embargoed until 2026-01-20 @ 1pm PT. **
+
 * Sat Oct 18 2025 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.9.0.10-2
 - Bump rpmrelease for CentOS build
 - Add scripts to handle tagging of portable-based RPMs
