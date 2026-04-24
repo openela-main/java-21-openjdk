@@ -308,7 +308,7 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 10
+%global updatever 11
 %global patchver 0
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
 # We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
@@ -344,7 +344,7 @@
 # Define IcedTea version used for SystemTap tapsets and desktop file
 %global icedteaver      6.0.0pre00-c848b93a8598
 # Define current Git revision for the FIPS support patches
-%global fipsver a0fd6e8ed6e
+%global fipsver feef2dc3ca7
 # Define JDK versions
 %global newjavaver %{featurever}.%{interimver}.%{updatever}.%{patchver}
 %global javaver         %{featurever}
@@ -365,7 +365,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        7
+%global buildver        10
 %global rpmrelease      1
 # Settings used by the portable build
 %global portablerelease 1
@@ -1443,7 +1443,8 @@ Patch1001: fips-%{featurever}u-%{fipsver}.patch
 #
 #############################################
 
-# Currently empty
+# JDK-8375294: (fs) Files.copy can fail with EOPNOTSUPP when copy_file_range not supported
+Patch2001: jdk8375294-handle-EOPNOTSUPP-in-copying.patch
 
 #############################################
 #
@@ -1530,19 +1531,19 @@ BuildRequires: libpng-devel
 BuildRequires: zlib-devel
 %else
 # Version in src/java.desktop/share/native/libfreetype/include/freetype/freetype.h
-Provides: bundled(freetype) = 2.13.3
+Provides: bundled(freetype) = 2.14.2
 # Version in src/java.desktop/share/native/libsplashscreen/giflib/gif_lib.h
-Provides: bundled(giflib) = 5.2.2
+Provides: bundled(giflib) = 6.1.2
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
-Provides: bundled(harfbuzz) = 11.2.0
+Provides: bundled(harfbuzz) = 12.3.2
 # Version in src/java.desktop/share/native/liblcms/lcms2.h
 Provides: bundled(lcms2) = 2.17.0
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
 Provides: bundled(libjpeg) = 6b
 # Version in src/java.desktop/share/native/libsplashscreen/libpng/png.h
-Provides: bundled(libpng) = 1.6.51
+Provides: bundled(libpng) = 1.6.57
 # Version in src/java.base/share/native/libzip/zlib/zlib.h
-Provides: bundled(zlib) = 1.3.1
+Provides: bundled(zlib) = 1.3.2
 %endif
 
 # this is always built, also during debug-only build
@@ -1920,6 +1921,8 @@ sh %{SOURCE12} %{top_level_dir_name}
 pushd %{top_level_dir_name}
 # Add crypto policy and FIPS support
 %patch -P1001 -p1
+# Add EOPNOTSUPP patch
+%patch -P2001 -p1
 popd # openjdk
 
 
@@ -2563,6 +2566,27 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Sat Apr 18 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.11.0.10-1
+- Update to jdk-21.0.11+10 (GA)
+- Update release notes to 21.0.11+10
+- Update FIPS patch to feef2dc3ca7 version synced with 21.0.11+9 and adapted to JDK-8244336
+- Bump freetype version to 2.14.2 following JDK-8373290 & JDK-8379158
+- Bump giflib version to 6.1.2 following JDK-8379256 & JDK-8380078
+- Bump libpng version to 1.6.57 following JDK-8380959 & JDK-8382047
+- Bump zlib version to 1.3.2 following JDK-8378631
+- Add JDK-8375294 EOPNOTSUPP patch ahead of 21.0.13
+- Sync the copy of the portable specfile with the latest update
+- ** This tarball is embargoed until 2026-04-21 @ 1pm PT. **
+- Resolves: RHEL-169610
+- Resolves: RHEL-133225
+- Resolves: RHEL-146658
+- Resolves: RHEL-148337
+- Resolves: RHEL-148851
+- Resolves: RHEL-157100
+- Resolves: RHEL-161227
+- Resolves: RHEL-161343
+- Resolves: RHEL-169617
+
 * Sun Jan 18 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.10.0.7-1
 - Update to jdk-21.0.10+7 (GA)
 - Update release notes to 21.0.10+7
