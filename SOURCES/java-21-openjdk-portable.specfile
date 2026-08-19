@@ -2,8 +2,8 @@
 %global featurever 21
 %global interimver 0
 %global updatever 12
-%global patchver 0
-%global buildver 8
+%global patchver 1
+%global buildver 1
 %global portablerelease 1
 %global rpmrelease 0
 
@@ -25,8 +25,16 @@
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 # Define an optional suffix for the OS this package is built on
-%if 0%{?rhel} == 7
-%global pkgos rhel7
+# The portable package is intended to be built on either RHEL 8
+# or CentOS Stream 9; any other OS will automatically get an
+# appropriate suffix
+%global rhel_buildos 8
+%global centos_buildos 9
+%if 0%{?centos} == 0 && 0%{?rhel} != 0%{rhel_buildos}
+%global pkgos rhel%{?rhel}
+%endif
+%if 0%{?centos} != 0 && 0%{?centos} != 0%{centos_buildos}
+%global pkgos rhel%{?centos}
 %endif
 
 # Define milestone (EA for pre-releases, GA for releases)
@@ -235,7 +243,7 @@ URL:      http://openjdk.java.net/
 # Set of architectures for which we have a devkit
 # Only used on RHEL
 %if 0%{?centos} == 0
-%global devkit_arches %{aarch64} %{ppc64le} riscv64 s390x x86_64
+%global devkit_arches %{aarch64} %{ppc64le} s390x x86_64
 %endif
 
 # By default, we build a slowdebug build during main build on JIT architectures
@@ -526,8 +534,14 @@ URL:      http://openjdk.java.net/
 
 # Define the architectures on which we build
 # On RHEL, this should be the architectures with a devkit
+# The exception is riscv64, which was introduced too recently
+# for a devkit to exist. In that case, we build without devkit
 %if 0%{?centos} == 0
+%if 0%{?rhel} >= 10
+ExclusiveArch: %{devkit_arches} riscv64
+%else
 ExclusiveArch: %{devkit_arches}
+%endif
 %else
 ExclusiveArch: %{aarch64} %{ppc64le} riscv64 s390x x86_64
 %endif
@@ -538,7 +552,7 @@ Source0: https://openjdk-sources.osci.io/openjdk%{featurever}/open%{vcstag}%{ea_
 # Use 'icedtea_sync.sh' to update the following
 # They are based on code contained in the IcedTea project (6.x).
 # Systemtap tapsets. Zipped up to keep it small.
-Source8: tapsets-icedtea-%%{icedteaver}.tar.xz
+Source8: tapsets-icedtea-%{icedteaver}.tar.xz
 
 # Desktop files. Adapted from IcedTea
 # Disabled in portables
@@ -683,7 +697,7 @@ BuildRequires: zip
 BuildRequires: tar
 BuildRequires: unzip
 BuildRequires: javapackages-filesystem
-BuildRequires: java-%{buildjdkver}-%{origin}%{?pkgos:-%{pkgos}}-devel
+BuildRequires: java-%{buildjdkver}-%{origin}-devel
 # Zero-assembler build requirement
 %ifarch %{zero_arches}
 BuildRequires: libffi-devel
@@ -873,6 +887,7 @@ The %{origin_nice} %{featurever} miscellany.
 
 echo "Preparing %{oj_vendor_version}"
 echo "System is RHEL=%{?rhel}%{!?rhel:0}, CentOS=%{?centos}%{!?centos:0}, EPEL=%{?epel}%{!?epel:0}, Fedora=%{?fedora}%{!?fedora:0}"
+echo "Portable suffix is %{?pkgos}%{!?pkgos:unset}"
 
 # Using the echo macro breaks rpmdev-bumpspec, as it parses the first line of stdout :-(
 %if 0%{?stapinstall:1}
@@ -1885,6 +1900,30 @@ done
 %endif
 
 %changelog
+* Mon Aug 10 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.12.1.1-1.0
+- Update to jdk-21.0.12.1+1 (GA)
+- Update release notes to 21.0.12.1+1
+- Fix double '%' in specification of IcedTea sources
+- ** This tarball is embargoed until 2026-08-18 @ 1pm PT. **
+- Resolves: OPENJDK-5042
+
+* Mon Aug 10 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.12.0.8-3.0
+- Make rhel usage in pkgos optional as it may be undefined
+- Simplify pkgos conditional to work on RHEL 8
+- Related: OPENJDK-5045
+
+* Fri Aug 07 2026 Andrea Bolognani <abologna@redhat.com> - 1:21.0.12.0.8-3.0
+- Automatically set pkgos when necessary
+- Remove now redundant pkgos usage in JDK build dependency
+- Don't attempt to use devkit on riscv64
+- Resolves: OPENJDK-5045
+- Resolves: OPENJDK-5046
+
+* Wed Jul 29 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.12.0.8-2.0
+- Add CVEs to NEWS file
+- Update to tarball with final changeset ID
+- Related: OPENJDK-4865
+
 * Wed Jul 15 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.12.0.8-1.0
 - Update to jdk-21.0.12+8 (GA)
 - Update release notes to 21.0.12+8
