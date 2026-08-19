@@ -7,8 +7,8 @@
 %global featurever 21
 %global interimver 0
 %global updatever 12
-%global patchver 0
-%global buildver 8
+%global patchver 1
+%global buildver 1
 %global portablerelease 1
 %global rpmrelease 2
 
@@ -2470,6 +2470,23 @@ exit 0
 %endif
 
 %changelog
+* Wed Aug 12 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.12.1.1-1.2
+- Bump release for PQC build
+- Related: RHEL-235622
+
+* Mon Aug 10 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.12.1.1-1.1
+- Update to jdk-21.0.12.1+1 (GA)
+- Update release notes to 21.0.12.1+1
+- Sync the copy of the portable specfile with the latest update
+- ** This tarball is embargoed until 2026-08-18 @ 1pm PT. **
+- Resolves: RHEL-235622
+
+* Wed Jul 29 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.12.0.8-2.1
+- Add CVEs to NEWS file
+- Update to tarball with final changeset ID
+- Sync the copy of the portable specfile with the latest update
+- Related: RHEL-188872
+
 * Sat Jul 18 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.12.0.8-1.2
 - Bump release for PQC build
 - Related: RHEL-212302
