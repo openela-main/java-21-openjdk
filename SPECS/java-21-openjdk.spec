@@ -6,16 +6,16 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 12
-%global patchver 1
-%global buildver 1
+%global updatever 13
+%global patchver 0
+%global buildver 9
 %global portablerelease 1
 %global rpmrelease 2
 
 # Define IcedTea version used for SystemTap tapsets and desktop file
 %global icedteaver      6.0.0pre00-c848b93a8598
 # Define current Git revision for the FIPS support patches
-%global fipsver feef2dc3ca7
+%global fipsver ad9e4df7698
 # Define JDK versions
 %global newjavaver %{featurever}.%{interimver}.%{updatever}.%{patchver}
 %global javaver         %{featurever}
@@ -1100,8 +1100,8 @@ Requires: ca-certificates
 # Require javapackages-filesystem for ownership of /usr/lib/jvm/ and macros
 Requires: javapackages-filesystem
 # Require zone-info data provided by tzdata-java sub-package
-# 2025a required as of JDK-8347965
-Requires: tzdata-java >= 2025a
+# 2026e required as of JDK-8393337
+Requires: tzdata-java >= 2026e
 # for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
@@ -1345,8 +1345,7 @@ Patch1001: fips-%{featurever}u-%{fipsver}.patch
 #
 #############################################
 
-# JDK-8375294: (fs) Files.copy can fail with EOPNOTSUPP when copy_file_range not supported
-Patch2001: jdk8375294-handle-EOPNOTSUPP-in-copying.patch
+# Currently empty
 
 #############################################
 #
@@ -1413,8 +1412,8 @@ BuildRequires: %{pkgnameroot}-misc = %{epoch}:%{version}-%{prelease}.%{portables
 %ifarch %{zero_arches}
 BuildRequires: libffi-devel
 %endif
-# 2025a required as of JDK-8347965
-BuildRequires: tzdata-java >= 2025a
+# 2026e required as of JDK-8393337
+BuildRequires: tzdata-java >= 2026e
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -1820,8 +1819,6 @@ sh %{SOURCE12} %{top_level_dir_name}
 pushd %{top_level_dir_name}
 # Add crypto policy and FIPS support
 %patch -P1001 -p1
-# Add EOPNOTSUPP patch
-%patch -P2001 -p1
 popd # openjdk
 
 # The OpenJDK version file includes the current
@@ -2470,6 +2467,22 @@ exit 0
 %endif
 
 %changelog
+* Tue Oct 20 2026 Thomas Fitzsimmons <fitzsim@redhat.com> - 1:21.0.13.0.9-1.2
+- Bump release for PQC build
+
+* Mon Oct 19 2026 Thomas Fitzsimmons <fitzsim@redhat.com> - 1:21.0.13.0.9-1.1
+- Update to jdk-21.0.13+9 (GA)
+- ** This tarball is embargoed until 2026-10-20 @ 1pm PT. **
+- Update release notes to OpenJDK 21.0.13+9
+- Update FIPS patch to ad9e4df7698 version
+- Remove upstreamed jdk8375294-handle-EOPNOTSUPP-in-copying.patch
+- Set tzdata requires and build requires to 2026e
+- Sync the copy of the portable specfile with the latest update
+
+* Thu Aug 20 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.12.1.1-2.1
+- Sync the copy of the portable specfile with the latest update
+- Related: RHEL-235622
+
 * Wed Aug 12 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.12.1.1-1.2
 - Bump release for PQC build
 - Related: RHEL-235622
