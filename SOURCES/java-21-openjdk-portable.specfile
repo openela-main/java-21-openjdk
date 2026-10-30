@@ -1,16 +1,16 @@
 # New Version-String scheme-style defines
 %global featurever 21
 %global interimver 0
-%global updatever 12
-%global patchver 1
-%global buildver 1
+%global updatever 13
+%global patchver 0
+%global buildver 9
 %global portablerelease 1
 %global rpmrelease 0
 
 # Define IcedTea version used for SystemTap tapsets and desktop file
 %global icedteaver      6.0.0pre00-c848b93a8598
 # Define current Git revision for the FIPS support patches
-%global fipsver feef2dc3ca7
+%global fipsver ad9e4df7698
 # Define JDK versions
 %global newjavaver %{featurever}.%{interimver}.%{updatever}.%{patchver}
 %global javaver         %{featurever}
@@ -634,8 +634,7 @@ Patch1001: fips-%{featurever}u-%{fipsver}.patch
 #
 #############################################
 
-# JDK-8375294: (fs) Files.copy can fail with EOPNOTSUPP when copy_file_range not supported
-Patch2001: jdk8375294-handle-EOPNOTSUPP-in-copying.patch
+# Currently empty
 
 #############################################
 #
@@ -940,8 +939,6 @@ sh %{SOURCE12} %{top_level_dir_name}
 pushd %{top_level_dir_name}
 # Add crypto policy and FIPS support
 %patch -P1001 -p1
-# Add EOPNOTSUPP patch
-%patch -P2001 -p1
 popd # openjdk
 
 
@@ -1900,6 +1897,17 @@ done
 %endif
 
 %changelog
+* Mon Oct 19 2026 Thomas Fitzsimmons <fitzsim@redhat.com> - 1:21.0.13.0.9-1.0
+- Update to jdk-21.0.13+9 (GA)
+- ** This tarball is embargoed until 2026-10-20 @ 1pm PT. **
+- Update release notes to OpenJDK 21.0.13+9
+- Update FIPS patch to ad9e4df7698 version
+- Remove upstreamed jdk8375294-handle-EOPNOTSUPP-in-copying.patch
+
+* Thu Aug 20 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.12.1.1-2.0
+- Add CVEs for August 2026 release
+- Related: OPENJDK-5042
+
 * Mon Aug 10 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.12.1.1-1.0
 - Update to jdk-21.0.12.1+1 (GA)
 - Update release notes to 21.0.12.1+1
