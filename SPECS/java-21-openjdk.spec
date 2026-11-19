@@ -7,15 +7,15 @@
 %global featurever 21
 %global interimver 0
 %global updatever 13
-%global patchver 0
-%global buildver 9
+%global patchver 1
+%global buildver 2
 %global portablerelease 1
 %global rpmrelease 2
 
 # Define IcedTea version used for SystemTap tapsets and desktop file
 %global icedteaver      6.0.0pre00-c848b93a8598
 # Define current Git revision for the FIPS support patches
-%global fipsver ad9e4df7698
+%global fipsver de44431fab9
 # Define JDK versions
 %global newjavaver %{featurever}.%{interimver}.%{updatever}.%{patchver}
 %global javaver         %{featurever}
@@ -1210,8 +1210,8 @@ Requires: ca-certificates
 # Require javapackages-filesystem for ownership of /usr/lib/jvm/ and macros
 Requires: javapackages-filesystem
 # Require zone-info data provided by tzdata-java sub-package
-# 2026e required as of JDK-8393337
-Requires: tzdata-java >= 2026e
+# 2026f required as of JDK-8396048
+Requires: tzdata-java >= 2026f
 # for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
@@ -1522,8 +1522,8 @@ BuildRequires: %{pkgnameroot}-misc = %{epoch}:%{version}-%{prelease}.%{portables
 %ifarch %{zero_arches}
 BuildRequires: libffi-devel
 %endif
-# 2026e required as of JDK-8393337
-BuildRequires: tzdata-java >= 2026e
+# 2026f required as of JDK-8396048
+BuildRequires: tzdata-java >= 2026f
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -1542,7 +1542,7 @@ BuildRequires: libpng-devel
 BuildRequires: zlib-devel
 %else
 # Version in src/java.desktop/share/native/libfreetype/include/freetype/freetype.h
-Provides: bundled(freetype) = 2.14.3
+Provides: bundled(freetype) = 2.15.0
 # Version in src/java.desktop/share/native/libsplashscreen/giflib/gif_lib.h
 Provides: bundled(giflib) = 6.1.3
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
@@ -1552,7 +1552,7 @@ Provides: bundled(lcms2) = 2.19.1
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
 Provides: bundled(libjpeg) = 6b
 # Version in src/java.desktop/share/native/libsplashscreen/libpng/png.h
-Provides: bundled(libpng) = 1.6.58
+Provides: bundled(libpng) = 1.6.59
 # Version in src/java.base/share/native/libzip/zlib/zlib.h
 Provides: bundled(zlib) = 1.3.2
 %endif
@@ -2564,17 +2564,37 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Wed Nov 18 2026 Andrew Hughes <gnu_andrew@linux.ibm.com> - 1:21.0.13.1.2-1.2
+- Bump release for PQC build
+- Related: RHEL-307437
+- Related: RHEL-307334
+
+* Sat Nov 14 2026 Andrew Hughes <gnu_andrew@linux.ibm.com> - 1:21.0.13.1.2-1.1
+- Update to jdk-21.0.13.1+2 (GA)
+- Update release notes to 21.0.13.1+2
+- Sync NEWS file with vanilla branch
+- Bump freetype version to 2.15.0 following JDK-8394492
+- Bump libpng version to 1.6.59 following JDK-8393195
+- Revise FIPS patch to exclude SUN.Signature.HSS/LMS; see https://github.com/rh-openjdk/jdk/pull/51
+- Require tzdata 2026f due to upstream inclusion of JDK-8396048
+- Sync the copy of the portable specfile with the latest update
+- ** This tarball is embargoed until 2026-08-18 @ 1pm PT. **
+- Resolves: RHEL-307437
+- Resolves: RHEL-307334
+
 * Tue Oct 20 2026 Thomas Fitzsimmons <fitzsim@redhat.com> - 1:21.0.13.0.9-1.2
 - Bump release for PQC build
+- Related: RHEL-288493
 
 * Mon Oct 19 2026 Thomas Fitzsimmons <fitzsim@redhat.com> - 1:21.0.13.0.9-1.1
 - Update to jdk-21.0.13+9 (GA)
-- ** This tarball is embargoed until 2026-10-20 @ 1pm PT. **
 - Update release notes to OpenJDK 21.0.13+9
 - Update FIPS patch to ad9e4df7698 version
 - Remove upstreamed jdk8375294-handle-EOPNOTSUPP-in-copying.patch
-- Set tzdata requires and build requires to 2026e
+- Set tzdata requires and build requires to 2026e  following JDK-8388214, JDK-8392377 & JDK-8393337
 - Sync the copy of the portable specfile with the latest update
+- ** This tarball is embargoed until 2026-10-20 @ 1pm PT. **
+- Resolves: RHEL-288493
 
 * Thu Aug 20 2026 Andrew Hughes <gnu.andrew@redhat.com> - 1:21.0.12.1.1-2.1
 - Sync the copy of the portable specfile with the latest update
