@@ -3,8 +3,133 @@ Key:
 JDK-X  - https://bugs.openjdk.java.net/browse/JDK-X
 CVE-XXXX-YYYY: https://cve.mitre.org/cgi-bin/cvename.cgi?name=XXXX-YYYY
 
+New in release OpenJDK 21.0.13.1 (2026-11-17):
+==============================================
+Live versions of these release notes can be found at:
+  * https://bit.ly/openjdk210131
+
+* CVEs
+  - CVE-2026-114938
+  - CVE-2026-114939
+  - CVE-2026-114940
+  - CVE-2026-114941
+  - CVE-2026-114942
+  - CVE-2026-114943
+  - CVE-2026-114944
+  - CVE-2026-114945
+  - CVE-2026-114946
+* Changes
+  - JDK-8316771: Krb5.java has not defined messages for all error codes
+  - JDK-8387162: Enhance Kerberos tickets
+  - JDK-8387541: Enhance StringBuilder checks
+  - JDK-8389830: Enhance JFR Events
+  - JDK-8389989: Enhance loop handling
+  - JDK-8390694: Enhance vector masks
+  - JDK-8390852: Improve integer compression
+  - JDK-8391595: [REDO] Enhance JMX Connections
+  - JDK-8393195: Update Libpng to 1.6.59
+  - JDK-8393212: Base64 optimization improvements
+  - JDK-8393456: Improve TLS client connections
+  - JDK-8394492: Update FreeType to 2.15.0
+  - JDK-8394664: Bump update version for OpenJDK: jdk-21.0.13.1
+  - JDK-8395690: CA certificate improvements
+  - JDK-8396048: (tz) Update to tzdata2026f
+
+Notes on individual issues:
+===========================
+
+security-libs/org.ietf.jgss:krb5:
+
+JDK-8387162: Enhance Kerberos tickets
+=====================================
+A Kerberos Ticket-Granting Ticket (TGT) may contain a transited field
+[0] which lists the other realms the ticket has passed through.  With
+this OpenJDK release, this field is now checked to make sure that each
+transited realm is in the list of allowed realms retrieved from
+sun.security.krb5.Realm.getRealmsList(String, String).  If the check
+fails, a KrbApErrException is thrown with KRB_AP_PATH_NOT_ACCEPTED as
+the reason.
+
+This check is enabled by default.  To retain the original behaviour,
+the new System property
+`sun.security.krb5.acceptor.checkTransitedPolicy` should be set to
+`false`.
+
+[0] https://datatracker.ietf.org/doc/html/rfc4120#section-3.3.3.2
+
+JDK-8391595: [REDO] Enhance JMX Connections
+===========================================
+The RMI stub URL service:jmx:rmi:///stub/<base64> carries a serialized
+Java object, encoded as base64.  With this OpenJDK release,
+deserialization of this object is now filtered to ensure it is of an
+appropriate type.  The default list of approved types is:
+
+* "java.lang.reflect.Proxy;"
+* "java.rmi.server.RemoteObjectInvocationHandler;"
+* "com.sun.proxy.$Proxy*;"
+* "java.rmi.server.RemoteStub;"
+* "java.rmi.server.RemoteObject;"
+* "javax.management.remote.rmi.RMIServerImpl_Stub;"
+
+This list is always checked.  Additional classes may be prepended to
+the list by using the environment map passed to the `connect` method
+and by setting a System property.  Both settings share the same key
+`jmx.remote.rmi.connector.url.filter.pattern` and both sources of
+additional classes are always checked.
+
+New in release OpenJDK 21.0.13.0.3 (2026-10-27):
+================================================
+Live versions of these release notes can be found at:
+  * https://bit.ly/openjdk2112
+
+* CVEs
+  - CVE-2026-114820
+* Changes
+  - JDK-8385585: EmSignRootG2CA.java test fails with: couldn't determine EE certificate status
+  - JDK-8395690: CA certificate improvements
+  - JDK-8395788: Bump update version for OpenJDK: jdk-21.0.13.0.3
+  - JDK-8395978: [21u] Remove designator DEFAULT_PROMOTED_VERSION_PRE=ea for release 21.0.13.0.3
+
+Notes on individual issues:
+===========================
+
+JDK-8395690: CA certificate improvements
+========================================
+The following root certificates associated with eMudhra have been
+removed from the `cacerts` keystore:
+
+Alias Name: comodoaaaca [jdk]
+Distinguished Name: CN=AAA Certificate Services, O=Comodo CA Limited, L=Salford, ST=Greater Manchester, C=GB
+SHA256: D7:A7:A0:FB:5D:7E:27:31:D7:71:E9:48:4E:BC:DE:F7:1D:5F:0C:3E:0A:29:48:78:2B:C8:3E:E0:EA:69:9E:F4
+
+Alias Name: emsignrootcag1 [jdk]
+Distinguished Name: CN=emSign Root CA - G1, O=eMudhra Technologies Limited, OU=emSign PKI, C=IN
+SHA256: 40:F6:AF:03:46:A9:9A:A1:CD:1D:55:5A:4E:9C:CE:62:C7:F9:63:46:03:EE:40:66:15:83:3D:C8:C8:D0:03:67
+
+Alias Name: emsigneccrootcag3 [jdk]
+Distinguished Name: CN=emSign ECC Root CA - G3, O=eMudhra Technologies Limited, OU=emSign PKI, C=IN
+SHA256: 86:A1:EC:BA:08:9C:4A:8D:3B:BE:27:34:C6:12:BA:34:1D:81:3E:04:3C:F9:E8:A8:62:CD:5C:57:A3:6B:BE:6B
+
+Alias Name: emsignrootcag2 [jdk]
+Distinguished Name: CN=emSign Root CA - G2, O=eMudhra Technologies Limited, OU=emSign PKI, C=IN
+SHA256: 1A:A0:C2:70:9E:83:1B:D6:E3:B5:12:9A:00:BA:41:F7:EE:EF:02:08:72:F1:E6:50:4B:F0:F6:C3:F2:4F:3A:F3
+
+New in release OpenJDK 21.0.13.0.2 (2026-10-22):
+================================================
+Live versions of these release notes can be found at:
+  * https://bit.ly/openjdk2112
+
+* CVEs
+  - CVE-2026-91403
+* Changes
+  - JDK-8395142: CA Enhancements
+  - JDK-8395373: Bump update version for OpenJDK: jdk-21.0.13.0.2
+  - JDK-8395623: [21u] Remove designator DEFAULT_PROMOTED_VERSION_PRE=ea for release 21.0.13.0.2
+
 New in release OpenJDK 21.0.13 (2026-10-20):
-============================================
+===========================================
+Live versions of these release notes can be found at:
+  * https://bit.ly/openjdk2112
 
 * CVEs
   - CVE-2026-83374
@@ -14,38 +139,38 @@ New in release OpenJDK 21.0.13 (2026-10-20):
   - CVE-2026-83381
   - CVE-2026-83387
   - CVE-2026-83395
-  - CVE-2026-87294
+  - CVE-2026-83400
   - CVE-2026-87290
   - CVE-2026-87291
   - CVE-2026-87292
-  - CVE-2026-83400
+  - CVE-2026-87294
+  - CVE-2026-87367
+  - CVE-2026-91332
   - CVE-2026-91333
   - CVE-2026-91334
-  - CVE-2026-87367
   - CVE-2026-91335
+  - CVE-2026-91373
+  - CVE-2026-91374
   - CVE-2026-91375
   - CVE-2026-91379
+  - CVE-2026-91379
   - CVE-2026-91380
-  - CVE-2026-91373
-  - CVE-2026-91332
-  - CVE-2026-91382
-  - CVE-2026-91374
   - CVE-2026-91394
   - CVE-2026-91397
   - CVE-2026-91398
   - CVE-2026-91400
   - CVE-2026-91410
-  - CVE-2026-91411
   - CVE-2026-91415
+  - CVE-2026-91418
   - CVE-2026-91451
   - CVE-2026-91452
   - CVE-2026-91453
-  - CVE-2026-91418
   - CVE-2026-91461
   - CVE-2026-91462
   - CVE-2026-91463
   - CVE-2026-91464
   - CVE-2026-91487
+  - CVE-2026-101516
 * Changes
   - JDK-7067310: 3 tests from closed/javax/sound/sampled caused BSOD on win 7 x86
   - JDK-8189441: Define algorithm names for keys derived from KeyAgreement
@@ -151,7 +276,7 @@ New in release OpenJDK 21.0.13 (2026-10-20):
   - JDK-8384654: Enhance Template Handling
   - JDK-8384664: Enhance Image Handling
   - JDK-8384688: Enhance jmod handling
-  - JDK-8384736: Enhance JShell 8387235: JShell tests failing
+  - JDK-8384736: Enhance JShell
   - JDK-8384746: Enhance Preferences
   - JDK-8384771: Enhance TLS handshakes
   - JDK-8384804: JMX remote bootstrap tests fail on Windows
@@ -171,7 +296,6 @@ New in release OpenJDK 21.0.13 (2026-10-20):
   - JDK-8386515: Enhance HTTP server parsing
   - JDK-8386525: Enhance HTTP Server Handler
   - JDK-8386535: Improve HTTP headers
-  - JDK-8386551: Windows build broken because of MSys2/Make update
   - JDK-8386552: Enhance GIF loading
   - JDK-8386578: double_keccak stub does not set its return value on x86
   - JDK-8386783: WebRowSet empty elements read value of previous element
@@ -180,6 +304,7 @@ New in release OpenJDK 21.0.13 (2026-10-20):
   - JDK-8387123: Remove LuxTrust Global Root CA
   - JDK-8387152: Enhance krb5 tokens
   - JDK-8387217: Enhance krb5 client
+  - JDK-8387235: JShell tests failing
   - JDK-8387238: Enhance Kerberos validation
   - JDK-8387593: Using XOR mode to clear the content leaves some traces in metal
   - JDK-8387625: Add "dt_socket" to `CheckedFeatures.notImplemented` for Windows/ARM64
@@ -201,29 +326,103 @@ New in release OpenJDK 21.0.13 (2026-10-20):
   - JDK-8393344: Cherry-pick metazone changes from CLDR to support tzdata2026e for JDK update releases
   - JDK-8393848: Align the JDK with Microsoft's new timezone name for Manitoba
   - JDK-8394265: [21u] Add explicit zone offset test for America/Rainy_River
+  - JDK-8394844: [21u] Remove designator DEFAULT_PROMOTED_VERSION_PRE=ea for release 21.0.13
 
 Notes on individual issues:
 ===========================
 
+core-libs/java.sql:
+
+JDK-8383301: Enhance WebRowSets
+===============================
+WebRowSet XML is now validated against the standard schema, which is
+packaged with this release (webrowset.xsd and sqlxml.xsd).  If
+validation causes issues with legacy documents, it may be disabled by
+setting the new System property `jdk.sql.rowset.webrowsetValidation`
+to `false`.
+
+core-libs/javax.naming:
+
+JDK-8382407: Enhance LDAP Lookups
+=================================
+In the October 2024 security update, the LDAP provider was altered to
+require an explicit opt-in for the transparent deserialisation of Java
+objects.  Since that release, applications that wish to reconstruct
+Java objects and RMI stubs from LDAP attributes have needed to set the
+System property `com.sun.jndi.ldap.object.trustSerialData` to `true`.
+
+A new System property is introduced in this release,
+`jdk.jndi.ldap.disabledURLSchemes`, to increase the flexibility of
+this filtering.  By default, the setting of this new property will
+follow `com.sun.jndi.ldap.object.trustSerialData` by being set to
+empty if `trustSerialData` is `true` (i.e. no filtering) and "rmi" if
+`trustSerialData` is `false` (the default).  Setting the new property
+to a comma-separated list of schemes allows further filtering to be
+specified, superseding the limited filtering of `trustSerialData`.
+
 hotspot/compiler:
 
-JDK-8348561, JDK-8351034: Improved ML-DSA Performance
-=====================================================
-This release contains significant performance improvements to ML-DSA operations,
-on platforms that support AVX-512 instructions.
+JDK-8341527: AVX-512 intrinsic for SHA3
+=======================================
+The release includes a SHA3 intrinsic for x86_64 platforms with the
+AVX-512 Byte and Word (BW) instructions, providing a 30-40% performance improvement,
+depending on the length of the digested message.
 
-JDK-8349721, JDK-8351412: Improved ML-KEM Performance
-=====================================================
-This release contains significant performance improvements to ML-DSA operations,
-on aarch64 platforms and on platforms that support AVX-512 instructions.
+security-libs/java.security:
 
-JDK-8341527: SHA3 Performance Improved
-======================================
-The HotSpot performance on the SHA3-512, SHA3-384, SHA3-256, and SHA3-224
-`MessageDigest` algorithms has been somewhat improved on some platforms, and
-significantly improved on platforms that support AVX-512 instructions.
+JDK-8298387: Implement JEP 497: Quantum-Resistant Module-Lattice-Based Digital Signature Algorithm
+==================================================================================================
+This release enhances the security of Java applications by providing
+an implementation of the quantum-resistant Module-Lattice-Based
+Digital Signature Algorithm (ML-DSA). Digital signatures are used to
+detect unauthorized modifications to data and to authenticate the
+identity of signatories. ML-DSA is designed to be secure against
+future quantum computing attacks. It has been standardized by the
+United States National Institute of Standards and Technology (NIST) in
+FIPS 204 [0].
+
+[0] https://csrc.nist.gov/pubs/fips/204/final
+
+JDK-8333867: SHA3 performance can be improved
+=============================================
+The performance of the SHA3 family of `MessageDigest` implementations
+(SHA3-224, SHA3-256, SHA3-384, SHA3-512) in this release has been
+improved by 6-27%, depending on the length of the digested message and
+the platform being used.
+
+JDK-8354305: SHAKE128 and SHAKE256 MessageDigest algorithms
+===========================================================
+This release introduces two new `MessageDigest` implementations in the
+`SUN` provider, `SHAKE128-256` and `SHAKE256-512`.  These
+implementations use fixed-length versions of the SHAKE128 and SHAKE256
+eXtendable-Output Functions (XOFs) defined by the United States
+National Institute of Standards and Technology (NIST) in FIPS 202 [0].
+
+[0] https://csrc.nist.gov/pubs/fips/202/final
+
+JDK-8387123: Remove LuxTrust Global Root CA
+===========================================
+The following root certificate from LuxTrust has been removed from the
+`cacerts` keystore:
+
+Alias Name: luxtrustglobalrootca [jdk]
+Distinguished Name: CN=LuxTrust Global Root, O=LuxTrust s.a., C=LU
+SHA256: A1:B2:DB:EB:64:E7:06:C6:16:9E:3C:41:18:B2:3B:AA:09:01:8A:84:27:66:6D:8B:F0:E2:88:91:EC:05:19:50
 
 security-libs/javax.crypto:
+
+JDK-8298390: Implement JEP 496: Quantum-Resistant Module-Lattice-Based Key Encapsulation Mechanism
+==================================================================================================
+This release enhances the security of Java applications by providing
+an implementation of the quantum-resistant Module-Lattice-Based
+Key-Encapsulation Mechanism (ML-KEM). Key encapsulation mechanisms
+(KEMs) are used to secure symmetric keys over insecure communication
+channels using public key cryptography. ML-KEM is designed to be
+secure against future quantum computing attacks. It has been
+standardized by the United States National Institute of Standards and
+Technology (NIST) in FIPS 203 [0].
+
+[0] https://csrc.nist.gov/pubs/fips/203/final
 
 JDK-8347938: Add Support for the Latest ML-KEM and ML-DSA Private Key Encodings
 ===============================================================================
@@ -259,29 +458,33 @@ property.
 [0] https://www.rfc-editor.org/rfc/rfc9935.html#name-private-key-format
 [1] https://www.rfc-editor.org/rfc/rfc9881.html#name-private-key-format
 
-security-libs/java.security:
+tools/jshell:
 
-JDK-8354305: New MessageDigest Algorithms, SHAKE128-256 and SHAKE256-512
-========================================================================
-This release introduces SHAKE128-256 and SHAKE256-512 `MessageDigest` algorithms
-to the SUN provider.
+JDK-8384736: Enhance JShell
+===========================
+Changes in this update have led to a minor change to the jdk.jshell
+API.  The method `extensionCommand(String command, Object arg)` in the
+`jdk.jshell.execution.StreamingExecutionControl` class now always
+throws `NotImplementedException`, whereas it previously could throw
+one of `RunException`, `EngineTerminationException` or
+`InternalException`.
 
-JDK-8333867: SHA3 Performance Improved
+xml/jaxp:
+
+JDK-8383699: Enhance XPath Expressions
 ======================================
-The performance of the SHA3-512, SHA3-384, SHA3-256, and SHA3-224
-`MessageDigest` algorithms has been somewhat improved on some platforms, and
-significantly improved on platforms that support AVX-512 instructions.
+The XSLT function `system-property()` can be used to access system
+properties of the JDK.  In this release, this access is now restricted
+to those properties defined by XSLT.  To access all system properties
+as before, the new System property `jdk.xml.allowNonXSLTSysProps` must
+be set to `true`.
 
-JDK-8387123: LuxTrust Global Root CA Removed
-============================================
-The following root certificates from LuxTrust has been removed from the
-`cacerts` keystore:
-
-Alias name: luxtrustglobalrootca [jdk]
-CN=LuxTrust Global Root
-O=LuxTrust s.a.
-C=LU
-SHA256: A1:B2:DB:EB:64:E7:06:C6:16:9E:3C:41:18:B2:3B:AA:09:01:8A:84:27:66:6D:8B:F0:E2:88:91:EC:05:19:50
+JDK-8384654: Enhance Template Handling
+======================================
+In this release, the deserialization of instances of the
+`TemplatesImpl` class is now disabled by default.  To re-enable
+deserialization, the System property
+`jdk.xml.enableTemplatesImplDeserialization` must be set to `true`
 
 New in release OpenJDK 21.0.12.1 (2026-08-18):
 ==============================================
